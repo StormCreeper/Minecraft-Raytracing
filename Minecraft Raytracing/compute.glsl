@@ -2,7 +2,7 @@
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-layout (rgba32f, binding = 0) uniform image3D img_output;
+layout (r8, binding = 0) uniform image3D img_output;
 
 //uniform float iTime;
 
@@ -130,5 +130,5 @@ void main() {
 	
 	//vec4 pixel = getPixelAt(coords);
 	//if(length(pixel.xyz) > 0) pixel +=  vec4(RandomFloat01(rngState)) * 0.1 - 0.05;
-	imageStore(img_output, coords, vec4(1));
+	imageStore(img_output, coords, vec4(1, 0, 0, 0));
 }

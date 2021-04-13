@@ -97,7 +97,7 @@ unsigned int VoxelTexture::generateTextureComputed() {
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, w, h, d, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8, w, h, d, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
 
 
 	char* shaderSource = readSource("compute.glsl");
@@ -119,12 +119,14 @@ unsigned int VoxelTexture::generateTextureComputed() {
 	//setUniformFloat(shader_program, "iTime", glfwGetTime());
 
 	glBindTexture(GL_TEXTURE_3D, id);
-	glBindImageTexture(0, id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
 	glDispatchCompute(w/8, h/8, d/8);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-	glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8);
 	glBindTexture(GL_TEXTURE_3D, 0);
 	glUseProgram(0);
+
+	glCheckError();
 
 	glDeleteProgram(shader_program);
 

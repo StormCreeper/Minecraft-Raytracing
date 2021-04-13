@@ -155,7 +155,7 @@ struct HitObj {
 
 vec4 testVoxel(int x, int y, int z) {
 	if (x < 0 || y < 0 || z < 0 || x >= mapSize.x || y >= mapSize.y || z >= mapSize.z) return vec4(1, 0, 0, 0);
-	return texture(tex3D, vec3(x, y, z) / mapSize).rgba;
+	return texture(tex3D, vec3(x, y, z) / mapSize).rrrr;
 }
 
 float projectToCube(vec3 ro, vec3 rd) {
@@ -279,7 +279,7 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj) {
 	int noiseScale = 16;
 	rngState = uint(uint(obj.hitPoint.x*noiseScale) * uint(201254) + uint(obj.hitPoint.y*noiseScale) * uint(19277)+ uint(obj.hitPoint.z*noiseScale) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	//obj.hitNormal = normalize(obj.hitNormal + vec3(RandomFloat01(rngState), RandomFloat01(rngState), RandomFloat01(rngState)) * 0.04);
-	obj.hitColor *= RandomFloat01(rngState)*0.2 + 0.8;
+	//obj.hitColor *= RandomFloat01(rngState)*0.2 + 0.8;
 	float n = fbm(vec3(ivec3(obj.hitPoint*16))/16.0*2, 5);
 	if(n < -0.5) obj.hitColor = vec3(0.9, 1, 0.1) * pow(-n, 0.5) * 1.5;
 	
@@ -304,7 +304,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 	if(obj.hit) {
 		float illum = 1.0;
 		illum = max(dot(lightDir, obj.hitNormal), 0.3);
-		//illum += 3*max(pow(dot(reflect(lightDir,obj.hitNormal), normalize(direction)), 128), 0);
+		illum += 3*max(pow(dot(reflect(lightDir,obj.hitNormal), normalize(direction)), 128), 0);
 
 		illum *= SendLightRay(obj.hitPoint + obj.hitNormal * epsilon, lightDir);
 		

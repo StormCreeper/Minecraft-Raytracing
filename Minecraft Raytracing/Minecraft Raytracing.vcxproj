@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="ImguiWindows.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="SimplexNoise.h" />
     <ClInclude Include="stb_image.h" />
@@ -160,7 +161,14 @@
     <ClInclude Include="VoxelTexture.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_draw.cpp" />
+    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_tables.cpp" />
+    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_widgets.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="imgui.cpp" />
+    <ClCompile Include="ImguiWindows.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="SimplexNoise.cpp" />

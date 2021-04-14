@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include <iostream>
+#include "ImguiWindows.h"
 
 Renderer* renderer_ptr;
 
@@ -35,7 +36,7 @@ bool Renderer::start() {
 	glfwSwapInterval(0);
 
 	//SETUP IMGUI
-	//ImguiWindowsManager::ImguiInit(window);
+	ImguiWindowsManager::ImguiInit(window_);
 
 	glClearColor(0.1f, 0.7f, 1.0f, 1.0f);
 
@@ -104,7 +105,7 @@ bool Renderer::start() {
 		if (!update())break;
 	}
 
-	//ImguiWindowsManager::ImguiCleanup();
+	ImguiWindowsManager::ImguiCleanup();
 
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &vbo);
@@ -125,7 +126,7 @@ bool Renderer::update() {
 
 	glfwPollEvents();
 
-	//ImguiWindowsManager::ImguiCreateWindows(*this);
+	if(drawWindows) ImguiWindowsManager::ImguiCreateWindows(*this);
 
 	camera.updateInput(window_, dt, b_paused);
 
@@ -146,7 +147,7 @@ bool Renderer::update() {
 
 	//glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, WIDTH, HEIGHT, 0);
 
-	//ImguiWindowsManager::ImguiRender();
+	if (drawWindows) ImguiWindowsManager::ImguiRender();
 
 	glfwSwapBuffers(window_);
 
@@ -171,6 +172,7 @@ void Renderer::updateUniforms() {
 
 bool enter_unpressed = true;
 bool escape_unpressed = true;
+bool m_unpressed = true;
 
 bool Renderer::processInput() {
 	if (glfwGetKey(window_, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -182,8 +184,7 @@ bool Renderer::processInput() {
 
 			escape_unpressed = false;
 		}
-	}
-	else {
+	} else {
 		escape_unpressed = true;
 	}
 	if (glfwGetKey(window_, GLFW_KEY_ENTER) == GLFW_PRESS) {
@@ -191,9 +192,16 @@ bool Renderer::processInput() {
 			reloadShaders();
 			enter_unpressed = false;
 		}
-	}
-	else {
+	} else {
 		enter_unpressed = true;
+	}
+	if (glfwGetKey(window_, GLFW_KEY_P) == GLFW_PRESS) {
+		if (m_unpressed) {
+			drawWindows = !drawWindows;
+			m_unpressed = false;
+		}
+	} else {
+		m_unpressed = true;
 	}
 
 	return false;

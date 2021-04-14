@@ -32,6 +32,8 @@ public:
 
 	char* shader_error;
 
+	bool drawWindows = false;
+
 public:
 	Renderer() = default;
 

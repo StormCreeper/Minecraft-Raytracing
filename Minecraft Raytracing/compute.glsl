@@ -2,11 +2,11 @@
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-layout (r8, binding = 0) uniform image3D img_output;
+layout (r8ui, binding = 0) uniform uimage3D img_output;
 
 //uniform float iTime;
 
-/*float tseed = 0;
+float tseed = 0;
 uint rngState;
 
 uint wang_hash(inout uint seed) {
@@ -96,8 +96,7 @@ float snoise(vec3 v){
 float fbm(vec3 pos, int octaves)  {
     float noiseSum = 0.0, frequency = 1.0, amplitude = 1.0;
     
-    for(int i = 0; i < octaves; ++i) 
-    {
+    for(int i = 0; i < octaves; ++i) {
         noiseSum += snoise(pos * frequency + vec3(i * 100.02341, 121 + i * 200.0354310, 121 + i * 150.02451)) * amplitude;
         amplitude *= 0.5;
         frequency *= 2.0;
@@ -106,29 +105,33 @@ float fbm(vec3 pos, int octaves)  {
     return noiseSum;
 }
 
-float marble(vec3 pos) {
-	float x = 0;
-	return 0;
+
+int getPixelAt(ivec3 coords) {
+
+	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0), 16))) * 128;
+	//height *= fbm(vec3(coords.xz*0.001, 0), 4) * 0.5 + 0.5;
+	if(coords.y > height) {
+		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 61) return 7;
+		return 0;
+	}
+	if(coords.y > height-2) return RandomFloat01(rngState) > 0.8 ? 11 : 1;
+	if(coords.y > height-7) return 2;
+
+	float noise = fbm(coords.xyz*0.1, 3) * fbm(coords.xyz*0.01, 2);
+	if(noise < -0.5) return 4;
+	noise = fbm(coords.xyz*0.1 + vec3(10), 3) * fbm(coords.xyz*0.01 + vec3(10), 2);
+	if(noise < -0.5) return 5;
+	noise = fbm(coords.xyz*0.1 + vec3(20), 3) * fbm(coords.xyz*0.01 + vec3(20), 2);
+	if(noise < -0.5) return 6;
+	return 3;
 }
-
-
-vec4 getPixelAt(ivec3 coords) {
-
-	float height = fbm(vec3(coords.xz*0.001, 0), 16) * 128 + 128;
-
-	if(coords.y > height) return vec4(0);
-	if(coords.y > height-2) return vec4(0.5, 0.9, 0, 0);
-	if(coords.y > height-7) return vec4(0.7, 0.5, 0.1, 0);
-
-	return vec4(0.7, 0.7, 0.7, 0);
-}*/
 
 void main() {
 	ivec3 coords = ivec3(gl_GlobalInvocationID);
 	
-	//uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
+	uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	
-	//vec4 pixel = getPixelAt(coords);
+	int pixel = getPixelAt(coords);
 	//if(length(pixel.xyz) > 0) pixel +=  vec4(RandomFloat01(rngState)) * 0.1 - 0.05;
-	imageStore(img_output, coords, vec4(1, 0, 0, 0));
+	imageStore(img_output, coords, uvec4(pixel));
 }

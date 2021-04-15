@@ -108,13 +108,20 @@ float fbm(vec3 pos, int octaves)  {
 
 int getPixelAt(ivec3 coords) {
 
-	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0), 16))) * 128;
+	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0) + 1*vec3(1, 1, 3), 16))) * 128;
 	//height *= fbm(vec3(coords.xz*0.001, 0), 4) * 0.5 + 0.5;
 	if(coords.y > height) {
-		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 61) return 7;
+		float n = fbm(coords * 0.1, 4);
+		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 90) return n > 0 ? 9 : 11;
 		return 0;
 	}
-	if(coords.y > height-2) return RandomFloat01(rngState) > 0.8 ? 11 : 1;
+	if(coords.y > height-3) {
+		float n = fbm(vec3(coords.xy, 0)*0.05, 4);
+		if(height > n * 8 + 120) return 12;
+		if(height > n * 18 + 110) return 3;
+		if(height > n * 18 + 94) return 2;
+		return 1;
+	} 
 	if(coords.y > height-7) return 2;
 
 	float noise = fbm(coords.xyz*0.1, 3) * fbm(coords.xyz*0.01, 2);

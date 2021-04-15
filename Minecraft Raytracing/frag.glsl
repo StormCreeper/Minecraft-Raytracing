@@ -332,9 +332,9 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 
 		if(type == 10) {
 			float n = fbm(co * 0.1, 3);
-			if(n > .4) mat.color = mix(mat.color, vec3(0, 0.3 + RandomFloat01(rngp) * 0.1, 0), (n - 0.5)*2);
+			if(n > .4) mat.color = mix(mat.color, vec3(0.2, 0.3 + RandomFloat01(rngp) * 0.1, 0.1), (n - 0.5)*2);
 			n = 1-abs(fbm(co * 0.1 + vec3(10), 3));
-			if(n > .8) mat.color = mix(mat.color, vec3(0, 0.5 + RandomFloat01(rngp) * 0.1, 0), pow((n - 0.5)*2, 4));
+			if(n > .8) mat.color = mix(mat.color, vec3(0.1, 0.5 + RandomFloat01(rngp) * 0.1, 0.1), pow((n - 0.5)*2, 4));
 		}
 
 		mat.specular = 0.1;
@@ -342,15 +342,29 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	}
 
 	if(type == 11) {
-		vec3 col = vec3(1, 1, 0.0);
+		vec3 col = vec3(1, 1, 0.5);
 		float d = 1/length(vec3(nco) - vec3(8, 8, 8)) * 8;
 		col *= pow(d, 0.4);
 		float noise = fbm(co * 0.1, 5) * 0.5 + 0.5;
 
-		mat.color = col;
+		mat.color = col*1.5;
 		mat.specular = 0;
 		mat.reflection = 1;//pow(1/d, 0.5)*0.2;
-		mat.tint = vec3(1, 1, 0.8);
+		mat.tint = vec3(1, 1, 0);
+		mat.normal = normalize(mat.normal + 0.01*(vec3(RandomFloat01(rngp), RandomFloat01(rngp), RandomFloat01(rngp)) * 2 - 1));
+
+		return;
+	}
+	if(type == 12) {
+		vec3 col = vec3(1, 1, 1);
+		float d = 1/length(vec3(nco) - vec3(8, 8, 8)) * 8;
+		col += vec3(RandomFloat01(rngp)) * 0.1;
+		float noise = fbm(co * 0.1, 5) * 0.5 + 0.5;
+
+		mat.color = col*2;
+		mat.specular = 0.5;
+		mat.reflection = 0;//pow(1/d, 0.5)*0.2;
+		mat.tint = vec3(1, 1, 0);
 		mat.normal = normalize(mat.normal + 0.01*(vec3(RandomFloat01(rngp), RandomFloat01(rngp), RandomFloat01(rngp)) * 2 - 1));
 
 		return;
@@ -359,7 +373,7 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	vec3 ore;
 	switch(type) {
 		case 1:
-			mat.color = vec3(0, 1, 0); break;
+			mat.color = vec3(0.3, 1, 0.1); break;
 		case 2:
 			mat.color = vec3(0.8, 0.7, 0.2); break;
 		case 3:

@@ -108,11 +108,13 @@ float fbm(vec3 pos, int octaves)  {
 
 int getPixelAt(ivec3 coords) {
 
-	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0) + 1*vec3(1, 1, 3), 16))) * 128;
+	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0) + 0.01*vec3(1, 1, 3), 16))) * 128;
 	//height *= fbm(vec3(coords.xz*0.001, 0), 4) * 0.5 + 0.5;
 	if(coords.y > height) {
-		float n = fbm(coords * 0.1, 4);
-		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 90) return n > 0 ? 9 : 11;
+		float n = 1-abs(fbm(coords * 0.1, 4));
+		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 110) return n < 0.8 ? 7 : 8;
+		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 110) return n < 0.8 ? 9 : 10;
+		if(coords.x > 80 && coords.x < 100 && coords.z > 140 && coords.z < 160 && coords.y < 110) return 11;
 		return 0;
 	}
 	if(coords.y > height-3) {

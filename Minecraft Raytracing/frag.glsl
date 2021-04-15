@@ -310,9 +310,9 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 
 		if(type == 8) {
 			float n = fbm(co * 0.1, 3);
-			if(n > .4) mat.color = mix(mat.color, vec3(0, 0.2 + RandomFloat01(rngp) * 0.1, 0), (n - 0.5)*2);
+			if(n > .4) mat.color = mix(mat.color, vec3(0.2, 0.3 + RandomFloat01(rngp) * 0.1, 0.1), (n - 0.5)*2);
 			n = 1-abs(fbm(co * 0.1 + vec3(10), 3));
-			if(n > .8) mat.color = mix(mat.color, vec3(0, 0.5 + RandomFloat01(rngp) * 0.1, 0), pow((n - 0.5)*2, 4));
+			if(n > .8) mat.color = mix(mat.color, vec3(0.1, 0.5 + RandomFloat01(rngp) * 0.1, 0.1), pow((n - 0.5)*2, 4));
 		}
 
 		mat.specular = 0.1;
@@ -374,6 +374,7 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	switch(type) {
 		case 1:
 			mat.color = vec3(0.3, 1, 0.1); break;
+			//mat.color = vec3(240.0/255.0, 214.0/255.0, 175.0/255.0); break;
 		case 2:
 			mat.color = vec3(0.8, 0.7, 0.2); break;
 		case 3:
@@ -412,142 +413,6 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	mat.specular = refl;
 		
 	return;
-}
-
-vec4 getBlockColor(uint type, vec3 pos, inout vec3 normal) {
-	vec3 col;
-
-	uint rngb = uint(uint(pos.x) * uint(201254) + uint(pos.y) * uint(19277)+ uint(pos.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-	uint rngp = uint(uint(pos.x*16) * uint(201254) + uint(pos.y*16) * uint(19277)+ uint(pos.z*16) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-
-	if(type == 7 || type == 8) {
-		vec3 ba = vec3(0.9, 0.4, 0.3);
-		vec3 bb = vec3(0.9, 0.8, 0.8);
-		//col = vec3(0.9, 0.6, 0.5) + vec3(RandomFloat01(rngp), RandomFloat01(rngp), RandomFloat01(rngp)) * 0.1;
-		/*ivec3 pob = ivec3(int(pos.x * 16) % 16, int(pos.y * 16) % 16, int(pos.z * 16) % 16);
-		ivec3 pob1 = ivec3(int(pos.x * 16 + (pob.z > 8 ? 0 : 4)) % 8, int(pos.y * 16) % 8, int(pos.z * 16) % 8);
-
-		float valx = sin(int(pos.x * 16));
-		float valy = sin(int(pos.z * 16) + (int(pos.x * 16) % 16 > 8 ? 4 : 0));
-		if(valx > 0.8 || valy > 0.8) col = vec3(0.4, 0.2, 0.1);*/
-
-		ivec3 co = ivec3(pos * 16);
-		bool displaced = true;
-		if(RandomFloat01(rngp) > 0.9) co.x ++;
-		else if(RandomFloat01(rngp) > 0.9) co.y ++;
-		else if(RandomFloat01(rngp) > 0.9) co.z ++;
-		else displaced = false;
-
-		if(abs(normal.x) > 0.5) if(co.y % 16 > 8) co.z += 8;
-		if(abs(normal.y) > 0.5) if(co.x % 16 > 8) co.z += 8;
-		if(abs(normal.z) > 0.5) if(co.y % 16 > 8) co.x += 8;
-
-		int vx = abs(8 - co.x % 16);
-		int vy = abs(4 - co.y % 8)*2;
-		int vz = abs(8 - co.z % 16);
-
-		if(abs(normal.y) > 0.5) vx = abs(4 - co.x % 8)*2;
-
-		float vam;
-
-		if(abs(normal.x) > 0.5) vam = max(vy, vz);
-		if(abs(normal.y) > 0.5) vam = max(vx, vz);
-		if(abs(normal.z) > 0.5) vam = max(vx, vy);
-
-		if(vam > 7) {
-			col = mix(bb, ba, displaced ? 0.5 : 0);
-		} else {
-			col = (ba + vec3(RandomFloat01(rngp)) * 0.1) * (1.7-pow(float(vam + 5) / 13, 0.7));
-		}
-
-		if(type == 8) {
-			float n = fbm(co * 0.1, 3);
-			if(n > .4) col = mix(col, vec3(0, 0.2 + RandomFloat01(rngp) * 0.1, 0), (n - 0.5)*2);
-			n = 1-abs(fbm(co * 0.1 + vec3(10), 3));
-			if(n > .8) col = mix(col, vec3(0, 0.5 + RandomFloat01(rngp) * 0.1, 0), pow((n - 0.5)*2, 4));
-		}
-		//col = vec3(float(vam) / 8.0);
-
-		return vec4(col, 0.1);
-	}
-	if(type == 9 || type == 10) {
-		vec3 col1 = vec3(0.3);
-		vec3 col2 = vec3(0.8);
-
-		ivec3 co = ivec3(pos * 16);
-		ivec3 nco = ivec3(pos * 16) % 16;
-		
-		float noise = fbm(vec3(co) *0.1, 4)*0.5 + 0.5;
-
-		col = mix(col1, col2, noise + RandomFloat01(rngp)*0.3);
-		col *= pow(1/length(vec3(nco) - vec3(8, 8, 8)) * 9, 1);
-
-		normal = normalize(normal + 0.01 * vec3(cos(noise*3), sin(noise*3), cos(noise*3 + 0.3)) + 0.00 * vec3(RandomFloat01(rngp), RandomFloat01(rngp), RandomFloat01(rngp)));
-
-		if(type == 10) {
-			float n = fbm(co * 0.1, 3);
-			if(n > .4) col = mix(col, vec3(0, 0.3 + RandomFloat01(rngp) * 0.1, 0), (n - 0.5)*2);
-			n = 1-abs(fbm(co * 0.1 + vec3(10), 3));
-			if(n > .8) col = mix(col, vec3(0, 0.5 + RandomFloat01(rngp) * 0.1, 0), pow((n - 0.5)*2, 4));
-		}
-		return vec4(col, 5);
-	}
-
-	if(type == 11) {
-
-	}
-
-	vec3 ore;
-	switch(type) {
-		case 1:
-			col = vec3(0, 1, 0); break;
-		case 2:
-			col = vec3(0.8, 0.7, 0.2); break;
-		case 3:
-			col = vec3(0.8, 0.8, 0.8); break;
-		case 4:
-			col = vec3(0.8, 0.8, 0.8);
-			ore = vec3(0.1, 0.1, 0.1); break;
-		case 5:
-			col = vec3(0.8, 0.8, 0.8);
-			ore = vec3(0.9, 0.8, 0.1); break;
-		case 6:
-			col = vec3(0.8, 0.8, 0.8);
-			ore = vec3(0.1, 0.8, 0.9); break;
-		default:
-			col = vec3(0, 1, 0); break;
-	}
-
-	int noiseScale = 16;
-	rngState = uint(uint(pos.x*noiseScale) * uint(201254) + uint(pos.y*noiseScale) * uint(19277)+ uint(pos.z*noiseScale) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-	col *= RandomFloat01(rngState)*0.2 + 0.8;
-	float refl = 0.02;
-	if(type == 3) refl = 0.1;
-	if(type==4 || type==5 || type==6) {
-		refl = 0.1;
-		float n = fbm(vec3(ivec3(pos*16))/16.0*2, 5);
-		if(n < -0.5) {
-			col = ore * pow(-n, 0.5) * 1.5;
-			refl = 2;
-		}
-	}
-
-	ivec3 posOnBloc = ivec3(int(pos.x * 16) % 16, int(pos.y * 16) % 16, int(pos.z * 16) % 16);
-	col *= pow(1/length(vec3(posOnBloc) - vec3(8, 8, 8)) * 8, 0.2);
-
-	if(type >= 3) normal = normalize(normal + vec3(RandomFloat01(rngState), RandomFloat01(rngState), RandomFloat01(rngState)) * 0.04);
-
-	rngState = uint(uint(pos.x) * uint(201254) + uint(pos.y) * uint(19277)+ uint(pos.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-	col *= RandomFloat01(rngState)*0.1 + 1;
-	normal = normalize(normal + vec3(RandomFloat01(rngState)*2-1, RandomFloat01(rngState)*2-1, RandomFloat01(rngState)*2-1) * 0.04);
-	
-		
-	return vec4(col, refl);
-}
-
-vec3 getVariation() {
-
-	return vec3(0);
 }
 
 struct HitObj {
@@ -631,7 +496,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 				ncol = sky;
 			}
 
-			return mix(obj.mat.color * illum, ncol * obj.mat.tint, obj.mat.reflection * FresnelReflectAmount(1, 1.8, obj.mat.normal, direction, 0, 0.8));
+			return mix(obj.mat.color * illum, ncol * obj.mat.tint, obj.mat.reflection * FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, 0.0, 0.8));
 		}
 	} else {
 		vec3 sky = texture(skybox, direction).xyz;

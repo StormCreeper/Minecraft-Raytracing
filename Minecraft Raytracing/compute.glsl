@@ -106,22 +106,22 @@ float fbm(vec3 pos, int octaves)  {
 }
 
 
-int getPixelAt(ivec3 coords) {
+int getVoxel(ivec3 coords) {
 
-	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0) + 0.01*vec3(1, 1, 3), 16))) * 128;
-	//height *= fbm(vec3(coords.xz*0.001, 0), 4) * 0.5 + 0.5;
+	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0), 16))) * 200;
+	//height *= 1-pow(1-abs(fbm(vec3(coords.xz*0.0001, 15), 16)), 100);
 	if(coords.y > height) {
 		float n = 1-abs(fbm(coords * 0.1, 4));
-		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 110) return n < 0.8 ? 7 : 8;
-		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 110) return n < 0.8 ? 9 : 10;
-		if(coords.x > 80 && coords.x < 100 && coords.z > 140 && coords.z < 160 && coords.y < 110) return 11;
+		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 210) return n < 0.8 ? 7 : 8;
+		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 210) return n < 0.8 ? 9 : 10;
+		if(coords.x > 80 && coords.x < 100 && coords.z > 140 && coords.z < 160 && coords.y < 210) return 11;
 		return 0;
 	}
 	if(coords.y > height-3) {
 		float n = fbm(vec3(coords.xy, 0)*0.05, 4);
-		if(height > n * 8 + 120) return 12;
-		if(height > n * 18 + 110) return 3;
-		if(height > n * 18 + 94) return 2;
+		if(height > n * 8 + 190) return 12;
+		if(height > n * 18 + 180) return 3;
+		if(height > n * 18 + 164) return 2;
 		return 1;
 	} 
 	if(coords.y > height-7) return 2;
@@ -140,7 +140,7 @@ void main() {
 	
 	uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	
-	int pixel = getPixelAt(coords);
+	int pixel = getVoxel(coords);
 	//if(length(pixel.xyz) > 0) pixel +=  vec4(RandomFloat01(rngState)) * 0.1 - 0.05;
 	imageStore(img_output, coords, uvec4(pixel));
 }

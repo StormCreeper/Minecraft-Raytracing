@@ -7,9 +7,10 @@
 #include <GLFW/glfw3.h>
 
 unsigned int VoxelTexture::generateTextureComputed() {
-	if(id)glDeleteTextures(1, &id);
+
+	if(id) glDeleteTextures(1, &id);
 	w = 256;
-	h = 128;
+	h = 256;
 	d = 256;
 
 	glGenTextures(1, &id);

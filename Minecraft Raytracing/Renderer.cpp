@@ -84,6 +84,8 @@ bool Renderer::start() {
 
 	// 3D VOXEL TEXTURE
 
+	vt.init();
+
 	//vt.generateTerrainTexture();
 	double start = glfwGetTime();
 	vt.generateTextureComputed();
@@ -92,7 +94,7 @@ bool Renderer::start() {
 	std::cout << "Texture generation time : " << (end-start)*1000 << " ms\n";
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, vt.id);
+	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
 
 	// SETTING CALLBACKS
 
@@ -117,20 +119,18 @@ bool Renderer::start() {
 }
 
 bool Renderer::update() {
-	/*vt.generateTextureComputed();
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, vt.id);
-
-	glUseProgram(shader);*/
 
 	glfwPollEvents();
 
-	if(drawWindows) ImguiWindowsManager::ImguiCreateWindows(*this);
+	ImguiWindowsManager::ImguiCreateWindows(*this);
 
 	camera.updateInput(window_, dt, b_paused);
 
 	if (processInput()) return false;
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
+	glUseProgram(shader);
 
 	updateUniforms();
 
@@ -160,14 +160,14 @@ void Renderer::updateUniforms() {
 
 	setUniformVec2(shader, "uResolution", static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
-	setUniformVec3(shader, "mapSize", static_cast<float>(vt.w), static_cast<float>(vt.h), static_cast<float>(vt.d));
+	setUniformVec3(shader, "mapSize", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
 
 	setUniformFloat(shader, "uTime", static_cast<float>(glfwGetTime()));
 	setUniformInt(shader, "tex3D", 0);
 	setUniformInt(shader, "skybox", 1);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, vt.id);
+	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
 }
 
 bool enter_unpressed = true;
@@ -218,16 +218,6 @@ void Renderer::reloadShaders() {
 		glUseProgram(new_shader);
 	}
 
-	double start = glfwGetTime();
-	vt.generateTextureComputed();
-	double end = glfwGetTime();
-
-	glActiveTexture(GL_TEXTURE0);
-	std::cout << "Texture generation time : " << (end - start) * 1000 << " ms\n";
-	glBindTexture(GL_TEXTURE_3D, vt.id);
-
-
-	std::cout << "Shaders reloaded" << std::endl;
 
 	glUseProgram(shader);
 	glCheckError();

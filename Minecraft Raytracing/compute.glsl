@@ -1,10 +1,10 @@
 #version 430
 
-layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 4) in;
 
 layout (r8ui, binding = 0) uniform uimage3D img_output;
 
-//uniform float iTime;
+uniform float iTime;
 
 float tseed = 0;
 uint rngState;
@@ -95,9 +95,11 @@ float snoise(vec3 v){
 
 float fbm(vec3 pos, int octaves)  {
     float noiseSum = 0.0, frequency = 1.0, amplitude = 1.0;
+    float ampSum = 0.0;
     
     for(int i = 0; i < octaves; ++i) {
         noiseSum += snoise(pos * frequency + vec3(i * 100.02341, 121 + i * 200.0354310, 121 + i * 150.02451)) * amplitude;
+        ampSum += amplitude;
         amplitude *= 0.5;
         frequency *= 2.0;
     }
@@ -105,24 +107,55 @@ float fbm(vec3 pos, int octaves)  {
     return noiseSum;
 }
 
+float getHeight01(vec2 pos, inout float h1, inout float flatness, inout float river) {
+	float scale = 0.001;
+	float waterlevel = 0.2;
+
+	float noise = fbm(vec3(pos * scale, 250), 16);
+
+	float mountain = pow(1 - abs(1-noise), 2);
+	river = pow(1 - abs(noise), 4);
+
+	float roughness = (fbm(vec3(pos * scale, 500), 1) * 0.5 + 0.5) * (1-mountain);
+
+	float land = fbm(vec3(pos * scale, 0), 16) * 0.5 + 0.5;
+
+	float mountainHeight = 0.7 + 0.3 * fbm(vec3(pos * scale, 750), 2);
+	h1 = mountain;
+	
+	flatness = 1 - mountain;
+
+	//river = (min(river + 0.1, 1) - 0.1) / (1 - 0.1);
+
+	return mix(0.05 + roughness * land + mountain * mountainHeight, waterlevel, river) - pow(river, 3) * 0.1;
+}
+
 
 int getVoxel(ivec3 coords) {
 
-	float height = (1-abs(fbm(vec3(coords.xz*0.001, 0), 16))) * 200;
-	//height *= 1-pow(1-abs(fbm(vec3(coords.xz*0.0001, 15), 16)), 100);
+	float h = 464;
+	float h1;
+	float f;
+	float r;
+	float height = getHeight01(coords.xz + vec2(50, 70), h1, f, r) * h;
+
+	//float height = (1-abs(fbm(vec3((coords.xz)*0.001, 0), 16))) * h;
+	//height *= pow(fbm(vec3((coords.xz)*0.0001, 0), 2), 2);
 	if(coords.y > height) {
 		float n = 1-abs(fbm(coords * 0.1, 4));
 		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 210) return n < 0.8 ? 7 : 8;
 		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 210) return n < 0.8 ? 9 : 10;
 		if(coords.x > 80 && coords.x < 100 && coords.z > 140 && coords.z < 160 && coords.y < 210) return 11;
+		if(coords.y < 0.2 * h) return 14;
 		return 0;
 	}
 	if(coords.y > height-3) {
-		float n = fbm(vec3(coords.xy, 0)*0.05, 4);
-		if(height > n * 8 + 190) return 12;
-		if(height > n * 18 + 180) return 3;
-		if(height > n * 18 + 164) return 2;
-		return 1;
+		//if(r > 0.6) return 14;
+		float n = fbm(vec3(coords.xz, 0)*0.05, 4);
+		if(h1*h > n * 8 + 0.90 * h) return 12;
+		if(h1*h > n * 18 + 0.85 * h) return 3;
+		if(h1*h > n * 18 + 0.80 * h) return 2;
+		return r >= 0.55 ? 13 : 1;
 	} 
 	if(coords.y > height-7) return 2;
 
@@ -141,6 +174,5 @@ void main() {
 	uint rngState = uint(uint(coords.x) * uint(1973) + uint(coords.y) * uint(12573) + uint(coords.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	
 	int pixel = getVoxel(coords);
-	//if(length(pixel.xyz) > 0) pixel +=  vec4(RandomFloat01(rngState)) * 0.1 - 0.05;
 	imageStore(img_output, coords, uvec4(pixel));
 }

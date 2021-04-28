@@ -89,6 +89,9 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\GLEW\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\glfw\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <StringPooling>true</StringPooling>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -100,12 +103,16 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\GLEW\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\glfw\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <StringPooling>false</StringPooling>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,6 +130,9 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\GLEW\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\glfw\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <StringPooling>true</StringPooling>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,12 +144,16 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\GLEW\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Dep\glfw\include;C:\Users\Telophase\source\repos\Minecraft Raytracing\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <StringPooling>false</StringPooling>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,7 +168,6 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ImguiWindows.h" />
     <ClInclude Include="Renderer.h" />
-    <ClInclude Include="SimplexNoise.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="vf3dMat44.h" />
@@ -171,7 +184,6 @@
     <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer.cpp" />
-    <ClCompile Include="SimplexNoise.cpp" />
     <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="vf3d.cpp" />

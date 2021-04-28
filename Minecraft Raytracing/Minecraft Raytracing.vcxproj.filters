@@ -24,9 +24,6 @@
     <ClInclude Include="Renderer.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="SimplexNoise.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
     <ClInclude Include="stb_image.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
@@ -51,9 +48,6 @@
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="Renderer.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="SimplexNoise.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="stb_image.cpp">

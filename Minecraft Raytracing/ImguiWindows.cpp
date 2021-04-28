@@ -1,6 +1,7 @@
 #include "ImguiWindows.h"
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <iostream>
 
 void ImguiWindowsManager::ImguiInit(GLFWwindow *window) {
     IMGUI_CHECKVERSION();
@@ -32,9 +33,10 @@ void ImguiWindowsManager::ImguiCreateWindows(Renderer &renderer) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    DebugWindowCubeDimensions(renderer);
-    DebugWindowDebugInfo(renderer);
-
+    if (renderer.drawWindows) {
+        DebugWindowCubeDimensions(renderer);
+        DebugWindowDebugInfo(renderer);
+    }
 }
 
 
@@ -43,6 +45,8 @@ void DebugWindowCubeDimensions(Renderer& R) {
     ImGui::Begin("Parameters");
 
     ImGui::Text("Scene parameters");
+    
+    ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 1024);
 
     ImGui::End();
 
@@ -57,8 +61,19 @@ void DebugWindowDebugInfo(Renderer& R) {
     ImGui::End();
 
     ImGui::Begin("Shader");
+    ImGui::Checkbox("Fragment shader", &R.rfp);
+    ImGui::Checkbox("Compute shader", &R.rcp);
     if (ImGui::Button("Reload Shaders")) {
-        R.reloadShaders();
+        if (R.rcp) {
+            R.vt.init();
+            R.vt.generateTextureComputed();
+        }
+        if(R.rfp) R.reloadShaders();
+
+        std::cout << "Shaders reloaded" << std::endl;
+    }
+    if (ImGui::Button("Regenerate voxel map")) {
+        R.vt.generateTextureComputed();
     }
 
     ImGui::Text(R.shader_error);

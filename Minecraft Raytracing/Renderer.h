@@ -32,7 +32,9 @@ public:
 
 	char* shader_error;
 
-	bool drawWindows = false;
+	bool drawWindows = true;
+	bool rcp;
+	bool rfp;
 
 public:
 	Renderer() = default;

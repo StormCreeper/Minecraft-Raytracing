@@ -48,6 +48,18 @@ void DebugWindowCubeDimensions(Renderer& R) {
     
     ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 1024);
 
+    ImGui::Text("Water");
+
+    ImGui::SliderFloat("Intensity", &R.wt.intensity, 0.0f, 2.0f);
+    ImGui::SliderFloat2("Speed", R.wt.speed, -10.0f, 10.0f);
+    ImGui::SliderFloat("Diffuse", &R.wt.diffuse, 0.0f, 2.0f);
+    ImGui::SliderFloat("Reflection", &R.wt.reflection, 0.0f, 1.0f);
+    ImGui::SliderFloat("Refraction", &R.wt.refraction, 0.0f, 1.0f);
+    ImGui::SliderFloat("IOR", &R.wt.ior, 1.0f, 2.0f);
+
+    ImGui::SliderFloat("Air absorbance", &R.air_absorbance, 0.0f, 5.0f, nullptr, 3);
+    ImGui::SliderFloat("Water absorbance", &R.water_absorbance, 0.0f, 5.0f, nullptr, 1);
+
     ImGui::End();
 
 }

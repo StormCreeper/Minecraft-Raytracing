@@ -148,6 +148,7 @@ void setUniformFloat(const unsigned int shader, const int location, const float 
 	glUniform1f(location, value);
 }
 
+
 float lerp(const float a, const float b, const float c) {
 	return a + c * (b - a);
 }

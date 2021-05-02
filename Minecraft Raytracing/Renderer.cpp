@@ -166,6 +166,16 @@ void Renderer::updateUniforms() {
 	setUniformInt(shader, "tex3D", 0);
 	setUniformInt(shader, "skybox", 1);
 
+	setUniformFloat(shader, "wt.intensity", wt.intensity);
+	setUniformVec2(shader, "wt.speed", wt.speed[0], wt.speed[1]);
+	setUniformFloat(shader, "wt.diffuse", wt.diffuse);
+	setUniformFloat(shader, "wt.reflection", wt.reflection);
+	setUniformFloat(shader, "wt.refraction", wt.refraction);
+	setUniformFloat(shader, "wt.ior", wt.ior);
+
+	setUniformFloat(shader, "air_absorbance", air_absorbance);
+	setUniformFloat(shader, "water_absorbance", water_absorbance);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
 }

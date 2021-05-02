@@ -18,6 +18,20 @@ uniform float uTime;
 
 float epsilon = 0.001;
 
+struct WaterParameters {
+	float intensity;
+	vec2 speed;
+	float diffuse;
+	float reflection;
+	float refraction;
+	float ior;
+};
+
+uniform WaterParameters wt;
+
+uniform float air_absorbance;
+uniform float water_absorbance;
+
 out vec4 FragColor;
 
 #define PI 3.141592653589793238462643383279
@@ -171,9 +185,10 @@ float projectToCube(vec3 ro, vec3 rd) {
 	return t;
 }
 
-float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput) {
+float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool cheap = false) {
 	vec3 origin = orig;
 	uint medium = testVoxel(int(origin.x), int(origin.y), int(origin.z));
+	if(medium != 14) medium = 0;
 	float t1 = max(projectToCube(origin, direction) - epsilon, 0);
 	origin += t1 * direction;
 
@@ -220,26 +235,32 @@ float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint b
 		sideDistZ = (mapZ + 1.0 - origin.z) * deltaDZ;
 	}
 
+	int step = 1;
+
 	for (int i = 0; i < 6000; i++) {
+
+		if(cheap && true) {
+			step = max(1, int(i / 10));
+		}
 		if ((mapX >= mapSize.x && stepX > 0) || (mapY >= mapSize.y && stepY > 0) || (mapZ >= mapSize.z && stepZ > 0)) break;
 		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
 
 		if (sideDistX < sideDistY && sideDistX < sideDistZ) {
 			sideDistX += deltaDX;
-			mapX += stepX;
+			mapX += stepX * step;
 			side = 0;
 		} else if(sideDistY < sideDistX && sideDistY < sideDistZ){
 			sideDistY += deltaDY;
-			mapY += stepY;
+			mapY += stepY * step;
 			side = 1;
 		} else {
 			sideDistZ += deltaDZ;
-			mapZ += stepZ;
+			mapZ += stepZ * step;
 			side = 2;
 		}
 
-		if(medium == 14) throughput.x *= 0.97;
-		if(medium == 0) throughput.y *= pow(0.9995,  pow(float(mapY) / 512.0, 2.));
+		if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
+		if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
 
 		uint block = testVoxel(mapX, mapY, mapZ);
 		if (block != medium) {
@@ -248,15 +269,15 @@ float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint b
 			else blockType = medium;
 
 			if (side == 0) {
-				perpWallDist = (mapX - origin.x + (1 - stepX) / 2) / direction.x + t1;
+				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x + t1;
 				normal = vec3(1, 0, 0) * -stepX;
 			}
 			else if (side == 1) {
-				perpWallDist = (mapY - origin.y + (1 - stepY) / 2) / direction.y + t1;
+				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y + t1;
 				normal = vec3(0, 1, 0) * -stepY;
 			}
 			else {
-				perpWallDist = (mapZ - origin.z + (1 - stepZ) / 2) / direction.z + t1;
+				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z + t1;
 				normal = vec3(0, 0, 1) * -stepZ;
 			}
 			break;
@@ -406,14 +427,15 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 		return;
 	}
 	if(type == 14) {
-		int depth = 5;
-		float time = uTime * 5;
-		float n11 = fbm(vec3(pos*16 + time) * 0.02, depth)*0.2 + 0.8;
+		int depth = 10;
+		vec2 time = uTime * wt.speed;
+		float scale = 0.02;
+		float n11 = fbm(vec3(pos*16 + vec3(time.x, 0, time.y)) * scale, depth)*0.2 + 0.8;
 		if(mat.normal.y > 0.5) {
-			float n12 = fbm(vec3(pos*16 + ivec3(1, 0, 0) + time) * 0.02, depth)*0.2 + 0.8;
-			float n21 = fbm(vec3(pos*16 + ivec3(0, 0, 1) + time) * 0.02, depth)*0.2 + 0.8;
+			float n12 = fbm(vec3(pos*16 + ivec3(1, 0, 0) + vec3(time.x, 0, time.y)) * scale, depth)*0.2 + 0.8;
+			float n21 = fbm(vec3(pos*16 + ivec3(0, 0, 1) + vec3(time.x, 0, time.y)) * scale, depth)*0.2 + 0.8;
 
-			mat.normal = - normalize(cross(vec3(1, n12-n11, 0),vec3(0, n21-n11, 1)));
+			mat.normal = -normalize(cross(vec3(1, n12 - n11, 0),vec3(0, n21-n11, 1)));
 		}
 
 		vec3 col = mix(vec3(0.1, 0.5, 1.0), vec3(0.2, 0.8, 1.0), n11);
@@ -471,26 +493,24 @@ struct HitObj {
 	bool hit;
 };
 
-void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throughput) {
+void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throughput, bool cheap = false) {
 	obj.hit = false;
 
 	uint blockType = 0;
 
-	float t = voxel_traversal(origin, direction, obj.mat.normal, blockType, throughput);
+	float t = voxel_traversal(origin, direction, obj.mat.normal, blockType, throughput, cheap);
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
 		getMaterial(blockType, obj.hitPoint, obj.mat);
 		obj.hit = true;
 	}
-	
-	
 }
 
-float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput) {
+float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput, bool cheap = false) {
 	vec3 norm;
 	uint bt;
-	float t = voxel_traversal(origin, direction, norm, bt, throughput);
+	float t = voxel_traversal(origin, direction, norm, bt, throughput, cheap);
 
 	return t>0 ? 0.5 : 1;
 
@@ -524,6 +544,7 @@ vec3 lerp(vec3 a, vec3 b, vec3 c) {
 }
 
 vec3 RayTrace(vec3 origin, vec3 direction) {
+	direction = normalize(direction);
 	HitObj obj;
 	vec3 endColor = vec3(1);
 
@@ -548,12 +569,12 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			HitObj obj2;
 			vec3 newDir = reflect(direction, obj.mat.normal);
 			vec3 throughput1 = throughput;
-			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput1);
+			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput1, true);
 			vec3 ncol;
 			if(obj2.hit) {
 				ncol = obj2.mat.color;
 				float illum = max(dot(lightDir, obj2.mat.normal), 0.3);
-				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl);
+				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl, true);
 				ncol *= illum;
 			} else {
 				vec3 sky = texture(skybox, newDir).xyz;
@@ -562,18 +583,20 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			ncol = mix(ncol, water_fog, 1-throughput1.x);
 			ncol = mix(ncol, air_fog, 1-throughput1.y);
 
-			endColor = mix(obj.mat.color * illum, ncol * obj.mat.tint, FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, obj.mat.rmin, obj.mat.rmax));
+			float amount = wt.reflection;// * FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, obj.mat.rmin, obj.mat.rmax);
+
+			endColor = mix(obj.mat.color * illum, ncol * obj.mat.tint, amount);
 		}
 		if(obj.mat.transparent > 0) {
 			HitObj obj2;
-			vec3 newDir = normalize(refract(direction, obj.mat.normal, 1./1.1));
+			vec3 newDir = normalize(refract(direction, obj.mat.normal, 1./wt.ior));
 			vec3 throughput2 = throughput;
-			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2);
+			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2, false);
 			vec3 ncol;
 			if(obj2.hit) {
 				ncol = obj2.mat.color;
 				float illum = max(dot(lightDir, obj2.mat.normal), 0.3);
-				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl);
+				//illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl);
 				ncol *= illum;
 			} else {
 				vec3 sky = texture(skybox, newDir).xyz;
@@ -581,7 +604,8 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			}
 			ncol = mix(ncol, water_fog, 1-throughput2.x);
 			ncol = mix(ncol, air_fog, 1-throughput2.y);
-			endColor = mix(endColor * obj.mat.tint, ncol * obj.mat.tint, FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, obj.mat.rmin, obj.mat.rmax));
+			float amount = wt.refraction;// * FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, obj.mat.rmin, obj.mat.rmax);
+			endColor = mix(endColor * obj.mat.tint, ncol * obj.mat.tint, amount);
 		}
 	} else {
 		vec3 sky = texture(skybox, direction).xyz;

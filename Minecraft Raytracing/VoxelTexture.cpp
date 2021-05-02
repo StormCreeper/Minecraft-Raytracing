@@ -4,13 +4,13 @@
 #include <GLFW/glfw3.h>
 
 VoxelTexture::VoxelTexture() {
-	dim[0] = 64;
-	dim[1] = 64;
-	dim[2] = 64;
+	dim[0] = 512;
+	dim[1] = 512;
+	dim[2] = 512;
 
-	ldim[0] = 64;
-	ldim[1] = 64;
-	ldim[2] = 64;
+	ldim[0] = 512;
+	ldim[1] = 512;
+	ldim[2] = 512;
 
 	texture_id = 0;
 	shader_id = 0;

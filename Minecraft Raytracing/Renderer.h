@@ -6,6 +6,15 @@
 #include "VoxelTexture.h"
 #include <GLFW/glfw3.h>
 
+struct WaterParameters {
+	float intensity;
+	float speed[2];
+	float diffuse;
+	float reflection;
+	float refraction;
+	float ior;
+};
+
 class Renderer {
 	int WIDTH, HEIGHT;
 	GLFWwindow* window_;
@@ -35,6 +44,13 @@ public:
 	bool drawWindows = true;
 	bool rcp;
 	bool rfp;
+
+	WaterParameters wt = {
+		1, {5, 4}, 1, 0.8, 0.7, 1.3
+	};
+
+	float air_absorbance = 3.25;
+	float water_absorbance = 1.3;
 
 public:
 	Renderer() = default;

@@ -46,7 +46,7 @@ void DebugWindowCubeDimensions(Renderer& R) {
 
     ImGui::Text("Scene parameters");
     
-    ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 1024);
+    ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 2048);
 
     ImGui::Text("Water");
 

@@ -42,6 +42,9 @@ uint rngState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * 
 vec3 lightDir = normalize(vec3(0.2, 1, -0.6));
 vec3 viewDir;
 
+vec3 air_fog = vec3(0.8, 1, 1);
+vec3 water_fog = vec3(0.1, 0.3, 0.5)*0.5;
+
 uint wang_hash(inout uint seed) {
     seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
     seed *= uint(9);
@@ -147,6 +150,18 @@ float fbm(vec3 pos, int octaves)  {
 
     return noiseSum;
 }
+float fbmOff(vec3 pos, vec3 off, int octaves)  {
+    float noiseSum = 0.0, frequency = 1.0, amplitude = 1.0;
+    
+    for(int i = 0; i < octaves; ++i) 
+    {
+        noiseSum += snoise(pos * frequency + off) * amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+
+    return noiseSum;
+}
 
 
 float RayPlaneIntersection(vec3 origin, vec3 direction, vec3 planeOrigin, vec3 planeNormal) {
@@ -185,7 +200,7 @@ float projectToCube(vec3 ro, vec3 rd) {
 	return t;
 }
 
-float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool cheap = false) {
+float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput) {
 	vec3 origin = orig;
 	uint medium = testVoxel(int(origin.x), int(origin.y), int(origin.z));
 	if(medium != 14) medium = 0;
@@ -238,10 +253,6 @@ float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint b
 	int step = 1;
 
 	for (int i = 0; i < 6000; i++) {
-
-		if(cheap && true) {
-			step = max(1, int(i / 10));
-		}
 		if ((mapX >= mapSize.x && stepX > 0) || (mapY >= mapSize.y && stepY > 0) || (mapZ >= mapSize.z && stepZ > 0)) break;
 		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
 
@@ -336,11 +347,15 @@ void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, 
 	}
 }
 
+float waterHeightFunction(vec3 pos, float scale, int depth) {
+	vec3 time = uTime * vec3(wt.speed.x, 0, wt.speed.y);
+	return fbmOff(pos * scale, time, depth) * 0.2 + 0.8;
+}
+
 void getMaterial(uint type, vec3 pos, inout Material mat) {
 
 	uint rngb = uint(uint(pos.x) * uint(201254) + uint(pos.y) * uint(19277)+ uint(pos.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	uint rngp = uint(uint(pos.x*16) * uint(201254) + uint(pos.y*16) * uint(19277)+ uint(pos.z*16) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-
 
 	ivec3 co = ivec3(pos * 16);
 	ivec3 nco = ivec3(pos * 16) % 16;
@@ -428,12 +443,11 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	}
 	if(type == 14) {
 		int depth = 10;
-		vec2 time = uTime * wt.speed;
-		float scale = 0.02;
-		float n11 = fbm(vec3(pos*16 + vec3(time.x, 0, time.y)) * scale, depth)*0.2 + 0.8;
+		float scale = wt.intensity;
+		float n11 = waterHeightFunction(pos, scale, depth);
 		if(mat.normal.y > 0.5) {
-			float n12 = fbm(vec3(pos*16 + ivec3(1, 0, 0) + vec3(time.x, 0, time.y)) * scale, depth)*0.2 + 0.8;
-			float n21 = fbm(vec3(pos*16 + ivec3(0, 0, 1) + vec3(time.x, 0, time.y)) * scale, depth)*0.2 + 0.8;
+			float n12 = waterHeightFunction(pos + vec3(1, 0, 0), scale, depth);
+			float n21 = waterHeightFunction(pos + vec3(0, 0, 1), scale, depth);
 
 			mat.normal = -normalize(cross(vec3(1, n12 - n11, 0),vec3(0, n21-n11, 1)));
 		}
@@ -493,12 +507,12 @@ struct HitObj {
 	bool hit;
 };
 
-void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throughput, bool cheap = false) {
+void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throughput) {
 	obj.hit = false;
 
 	uint blockType = 0;
 
-	float t = voxel_traversal(origin, direction, obj.mat.normal, blockType, throughput, cheap);
+	float t = voxel_traversal(origin, direction, obj.mat.normal, blockType, throughput);
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
@@ -507,34 +521,12 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 	}
 }
 
-float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput, bool cheap = false) {
+float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput) {
 	vec3 norm;
 	uint bt;
-	float t = voxel_traversal(origin, direction, norm, bt, throughput, cheap);
+	float t = voxel_traversal(origin, direction, norm, bt, throughput);
 
 	return t>0 ? 0.5 : 1;
-
-}
-
-float FresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float f0, float f90) {
-        // Schlick aproximation
-        float r0 = (n1-n2) / (n1+n2);
-        r0 *= r0;
-        float cosX = -dot(normal, incident);
-        if (n1 > n2)
-        {
-            float n = n1/n2;
-            float sinT2 = n*n*(1.0-cosX*cosX);
-            // Total internal reflection
-            if (sinT2 > 1.0)
-                return f90;
-            cosX = sqrt(1.0-sinT2);
-        }
-        float x = 1.0-cosX;
-        float ret = r0+(1.0-r0)*x*x*x*x*x;
- 
-        // adjust reflect multiplier for object reflectivity
-        return mix(f0, f90, ret);
 }
 
 vec3 lerp(vec3 a, vec3 b, vec3 c) {
@@ -543,6 +535,67 @@ vec3 lerp(vec3 a, vec3 b, vec3 c) {
 		mix(a.z, b.z, c.z));
 }
 
+vec3 getSkyColor(vec3 dir) {
+	//return texture(skybox, dir).xyz;
+	vec3 color = vec3(0.2, 0.3, 0.8);
+	color += pow(max(dot(lightDir, dir), 0), 256) * vec3(1, 0.6, 0.8) * 6;
+	float density = fbm(dir*0.6 + vec3(uTime*0.05, 0, 0) + vec3(10), 1) * 0.5 + 0.5;
+	float cloud = fbm(dir + vec3(uTime*0.07, 0, 0), 10) * 0.5 + 0.5;
+	float heightMod = 1/(1+exp(-4*dir.y));
+	color += density * cloud * heightMod;
+	return color;
+}
+
+vec3 getInfoFrom(vec3 origin, vec3 direction, inout HitObj obj) {
+	vec3 endColor = vec3(1);
+
+	vec3 throughput = vec3(1);
+	vec3 throughputl = vec3(1);
+
+	SendOneRay(origin, direction, obj, throughput);
+	if(obj.hit) {
+		float illum = 1.0;
+		illum = max(dot(lightDir, obj.mat.normal), 0.3);
+		illum += obj.mat.specular * 5 *max(pow(dot(reflect(lightDir,obj.mat.normal), normalize(direction)), 128), 0);
+
+		illum *= SendLightRay(obj.hitPoint + obj.mat.normal * epsilon, lightDir, throughputl);
+		
+		endColor = obj.mat.color * illum;
+
+	} else {
+		vec3 sky = texture(skybox, direction).xyz;
+		endColor *= sky;
+	}
+
+	endColor = mix(endColor, water_fog, 1-throughput.x);
+	endColor = mix(endColor, air_fog, 1-throughput.y);
+
+	return endColor;
+}
+void fresnel(vec3 I, vec3 N, float ior, inout float kr)  {
+    float cosi = clamp(-1, 1, dot(I, N)); 
+    float etai = 1, etat = ior; 
+    if (cosi > 0) {
+    	float tmp = etai;
+    	etai = etat;
+    	etat = tmp;
+   	} 
+    // Compute sini using Snell's law
+    float sint = etai / etat * sqrt(max(0.f, 1 - cosi * cosi)); 
+    // Total internal reflection
+    if (sint >= 1) { 
+        kr = 1; 
+    } 
+    else { 
+        float cost = sqrt(max(0.f, 1 - sint * sint)); 
+        cosi = abs(cosi); 
+        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost)); 
+        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
+        kr = (Rs * Rs + Rp * Rp) / 2; 
+    } 
+    // As a consequence of the conservation of energy, transmittance is given by:
+    // kt = 1 - kr;
+}
 vec3 RayTrace(vec3 origin, vec3 direction) {
 	direction = normalize(direction);
 	HitObj obj;
@@ -550,9 +603,6 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 
 	vec3 throughput = vec3(1);
 	vec3 throughputl = vec3(1);
-
-	vec3 air_fog = vec3(0.8, 1, 1);
-	vec3 water_fog = vec3(0.1, 0.3, 0.5)*0.5;
 	
 	SendOneRay(origin, direction, obj, throughput);
 	if(obj.hit) {
@@ -569,16 +619,15 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			HitObj obj2;
 			vec3 newDir = reflect(direction, obj.mat.normal);
 			vec3 throughput1 = throughput;
-			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput1, true);
+			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput1);
 			vec3 ncol;
 			if(obj2.hit) {
 				ncol = obj2.mat.color;
 				float illum = max(dot(lightDir, obj2.mat.normal), 0.3);
-				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl, true);
+				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl);
 				ncol *= illum;
 			} else {
-				vec3 sky = texture(skybox, newDir).xyz;
-				ncol = sky;
+				ncol = getSkyColor(newDir);
 			}
 			ncol = mix(ncol, water_fog, 1-throughput1.x);
 			ncol = mix(ncol, air_fog, 1-throughput1.y);
@@ -591,7 +640,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			HitObj obj2;
 			vec3 newDir = normalize(refract(direction, obj.mat.normal, 1./wt.ior));
 			vec3 throughput2 = throughput;
-			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2, false);
+			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2);
 			vec3 ncol;
 			if(obj2.hit) {
 				ncol = obj2.mat.color;
@@ -608,8 +657,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			endColor = mix(endColor * obj.mat.tint, ncol * obj.mat.tint, amount);
 		}
 	} else {
-		vec3 sky = texture(skybox, direction).xyz;
-		endColor *= sky;
+		endColor *= getSkyColor(direction);
 	}
 
 	endColor = mix(endColor, water_fog, 1-throughput.x);
@@ -621,13 +669,11 @@ void main() {
 	vec3 origin = viewPos;
 	vec2 uv;
 	uv = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
-	vec3 dir = vec3(uv.x, uv.y, 0.5);
-    vec3 direction = (vec4(dir, 0) * view).xyz;
+	vec3 dir = normalize(vec3(uv.x, uv.y, 0.4));
+    vec3 direction = normalize((vec4(dir, 0) * view).xyz);
+
     viewDir = (vec4(0, 1, 0, 0) * view).xyz;
 	FragColor.xyz += RayTrace(origin, direction).xyz;
+
 	return;
-	float n = fbm(vec3(uv.xy * 5.0, 0), 16);
-	float r = 1-abs(n);
-	float g = 1-abs(1-n - 0.4);
-	FragColor.xyz = vec3(r, g, 0);
 }

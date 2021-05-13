@@ -137,16 +137,16 @@ int getVoxel(ivec3 coords) {
 	float h1;
 	float f;
 	float r;
-	float height = getHeight01(coords.xz + vec2(50, 70), h1, f, r) * h;
+	float height = getHeight01(coords.xz + vec2(400, 500), h1, f, r) * h;
 
 	//float height = (1-abs(fbm(vec3((coords.xz)*0.001, 0), 16))) * h;
 	//height *= pow(fbm(vec3((coords.xz)*0.0001, 0), 2), 2);
 	if(coords.y > height) {
-		/*float n = 1-abs(fbm(coords * 0.1, 4));
+		float n = 1-abs(fbm(coords * 0.1, 4));
 		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 210) return n < 0.8 ? 7 : 8;
 		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 210) return n < 0.8 ? 9 : 10;
 		if(coords.x > 80 && coords.x < 100 && coords.z > 140 && coords.z < 160 && coords.y < 210) return 11;
-		*/
+		
 		if(coords.y < 0.2 * h) return 14;
 		return 0;
 	}
@@ -163,7 +163,7 @@ int getVoxel(ivec3 coords) {
 	float noise = fbm(coords.xyz*0.1, 3) * fbm(coords.xyz*0.01, 2);
 	if(noise < -0.5) return 4;
 	noise = fbm(coords.xyz*0.1 + vec3(10), 3) * fbm(coords.xyz*0.01 + vec3(10), 2);
-	if(noise < -0.5) return 5;
+	if(noise < -0.5) return 8;
 	noise = fbm(coords.xyz*0.1 + vec3(20), 3) * fbm(coords.xyz*0.01 + vec3(20), 2);
 	if(noise < -0.5) return 6;
 	return 3;

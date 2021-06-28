@@ -13,6 +13,106 @@ void windowResizeCallback(GLFWwindow* window, const int width, const int height)
 	glViewport(0, 0, width, height);
 	renderer_ptr->setWidthHeight(width, height);
 }
+void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id,
+	GLenum severity, GLsizei length,
+	const GLchar* msg, const void* data)
+{
+	char* _source;
+	char* _type;
+	char* _severity;
+
+	switch (source) {
+	case GL_DEBUG_SOURCE_API:
+		_source = (char*)"API";
+		break;
+
+	case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+		_source = (char*)"WINDOW SYSTEM";
+		break;
+
+	case GL_DEBUG_SOURCE_SHADER_COMPILER:
+		_source = (char*)"SHADER COMPILER";
+		break;
+
+	case GL_DEBUG_SOURCE_THIRD_PARTY:
+		_source = (char*)"THIRD PARTY";
+		break;
+
+	case GL_DEBUG_SOURCE_APPLICATION:
+		_source = (char*)"APPLICATION";
+		break;
+
+	case GL_DEBUG_SOURCE_OTHER:
+		_source = (char*)"UNKNOWN";
+		break;
+
+	default:
+		_source = (char*)"UNKNOWN";
+		break;
+	}
+
+	switch (type)
+	{
+	case GL_DEBUG_TYPE_ERROR:
+		_type = (char*)"ERROR";
+		break;
+
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+		_type = (char*)"DEPRECATED BEHAVIOR";
+		break;
+
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+		_type = (char*)"UDEFINED BEHAVIOR";
+		break;
+
+	case GL_DEBUG_TYPE_PORTABILITY:
+		_type = (char*)"PORTABILITY";
+		break;
+
+	case GL_DEBUG_TYPE_PERFORMANCE:
+		_type = (char*)"PERFORMANCE";
+		break;
+
+	case GL_DEBUG_TYPE_OTHER:
+		_type = (char*)"OTHER";
+		break;
+
+	case GL_DEBUG_TYPE_MARKER:
+		_type = (char*)"MARKER";
+		break;
+
+	default:
+		_type = (char*)"UNKNOWN";
+		break;
+	}
+
+	switch (severity) {
+	case GL_DEBUG_SEVERITY_HIGH:
+		_severity = (char*)"HIGH";
+		break;
+
+	case GL_DEBUG_SEVERITY_MEDIUM:
+		_severity = (char*)"MEDIUM";
+		break;
+
+	case GL_DEBUG_SEVERITY_LOW:
+		_severity = (char*)"LOW";
+		//	return;
+		break;
+
+	case GL_DEBUG_SEVERITY_NOTIFICATION:
+		_severity = (char*)"NOTIFICATION";
+		return;
+		break;
+
+	default:
+		_severity = (char*)"UNKNOWN";
+		break;
+	}
+
+	printf("%d: %s of %s severity, raised from %s: %s\n",
+		id, _type, _severity, _source, msg);
+}
 
 bool Renderer::start() {
 	renderer_ptr = this;
@@ -23,6 +123,8 @@ bool Renderer::start() {
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, 1);
 
 	window_ = glfwCreateWindow(WIDTH, HEIGHT, "Cool raytracing thing", nullptr, nullptr);
 	if (!window_) {
@@ -38,7 +140,7 @@ bool Renderer::start() {
 	//SETUP IMGUI
 	ImguiWindowsManager::ImguiInit(window_);
 
-	glClearColor(0.1f, 0.7f, 1.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	// SCREEN QUAD CREATION
 
@@ -86,7 +188,6 @@ bool Renderer::start() {
 
 	vt.init();
 
-	//vt.generateTerrainTexture();
 	double start = glfwGetTime();
 	vt.generateTextureComputed();
 	double end = glfwGetTime();
@@ -100,6 +201,9 @@ bool Renderer::start() {
 
 	glfwSetCursorPosCallback(window_, mousePosCallback);
 	glfwSetWindowSizeCallback(window_, windowResizeCallback);
+
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(gl_debug_callback, nullptr);
 
 	glUseProgram(shader);
 
@@ -134,20 +238,15 @@ bool Renderer::update() {
 
 	updateUniforms();
 
-	//vt.Update(x, y, z);
 	//UPDATE dt
 	const auto now = std::chrono::high_resolution_clock::now();
 	dt = std::chrono::duration<float>(now - last_time).count();
 	last_time = now;
 
-	//glCheckError();
-
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
-	//glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 0, 0, WIDTH, HEIGHT, 0);
-
-	if (drawWindows) ImguiWindowsManager::ImguiRender();
+	ImguiWindowsManager::ImguiRender();
 
 	glfwSwapBuffers(window_);
 

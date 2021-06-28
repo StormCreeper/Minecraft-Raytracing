@@ -46,11 +46,11 @@ public:
 	bool rfp;
 
 	WaterParameters wt = {
-		1, {5, 4}, 1, 0.8, 0.7, 1.3
+		0.1, {0.5, 0.3}, 1, 0.8, 0.7, 1.3
 	};
 
 	float air_absorbance = 3.25;
-	float water_absorbance = 1.3;
+	float water_absorbance = 1.1;
 
 public:
 	Renderer() = default;

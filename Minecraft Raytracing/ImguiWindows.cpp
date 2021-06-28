@@ -14,7 +14,6 @@ void ImguiWindowsManager::ImguiInit(GLFWwindow *window) {
 }
 
 void ImguiWindowsManager::ImguiRender() {
-
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
@@ -51,14 +50,14 @@ void DebugWindowCubeDimensions(Renderer& R) {
     ImGui::Text("Water");
 
     ImGui::SliderFloat("Intensity", &R.wt.intensity, 0.0f, 2.0f);
-    ImGui::SliderFloat2("Speed", R.wt.speed, -10.0f, 10.0f);
+    ImGui::SliderFloat2("Speed", R.wt.speed, -1.0f, 1.0f);
     ImGui::SliderFloat("Diffuse", &R.wt.diffuse, 0.0f, 2.0f);
     ImGui::SliderFloat("Reflection", &R.wt.reflection, 0.0f, 1.0f);
     ImGui::SliderFloat("Refraction", &R.wt.refraction, 0.0f, 1.0f);
     ImGui::SliderFloat("IOR", &R.wt.ior, 1.0f, 2.0f);
 
-    ImGui::SliderFloat("Air absorbance", &R.air_absorbance, 0.0f, 5.0f, nullptr, 3);
-    ImGui::SliderFloat("Water absorbance", &R.water_absorbance, 0.0f, 5.0f, nullptr, 1);
+    ImGui::SliderFloat("Air absorbance", &R.air_absorbance, 0.0f, 5.0f);
+    ImGui::SliderFloat("Water absorbance", &R.water_absorbance, 0.0f, 5.0f);
 
     ImGui::End();
 
@@ -87,6 +86,7 @@ void DebugWindowDebugInfo(Renderer& R) {
     if (ImGui::Button("Regenerate voxel map")) {
         R.vt.generateTextureComputed();
     }
+    ImGui::SliderInt("Speed mod", &R.camera.speed_mod, -10, 10);
 
     ImGui::Text(R.shader_error);
     ImGui::End();

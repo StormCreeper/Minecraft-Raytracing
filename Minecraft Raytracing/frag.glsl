@@ -1,6 +1,7 @@
 #version 430
 
 in vec2 fragPos;
+in float log2;
 
 uniform mat4 view;
 
@@ -54,9 +55,9 @@ uint wang_hash(inout uint seed) {
     return seed;
 }
 float RandomFloat01(inout uint state) {
-
     return float(wang_hash(state)) / 4294967296.0;
 }
+
 vec3 RandomUnitVector(inout uint state) {
     float z = RandomFloat01(state) * 2.0f - 1.0f;
     float a = RandomFloat01(state) * 2 * PI;
@@ -141,8 +142,7 @@ float snoise(vec3 v){
 float fbm(vec3 pos, int octaves)  {
     float noiseSum = 0.0, frequency = 1.0, amplitude = 1.0;
     
-    for(int i = 0; i < octaves; ++i) 
-    {
+    for(int i = 0; i < octaves; ++i)  {
         noiseSum += snoise(pos * frequency + vec3(i * 100.02341, 121 + i * 200.0354310, 121 + i * 150.02451)) * amplitude;
         amplitude *= 0.5;
         frequency *= 2.0;
@@ -153,16 +153,13 @@ float fbm(vec3 pos, int octaves)  {
 float fbmOff(vec3 pos, vec3 off, int octaves)  {
     float noiseSum = 0.0, frequency = 1.0, amplitude = 1.0;
     
-    for(int i = 0; i < octaves; ++i) 
-    {
+    for(int i = 0; i < octaves; ++i)  {
         noiseSum += snoise(pos * frequency + off) * amplitude;
         amplitude *= 0.5;
         frequency *= 2.0;
     }
-
     return noiseSum;
 }
-
 
 float RayPlaneIntersection(vec3 origin, vec3 direction, vec3 planeOrigin, vec3 planeNormal) {
 	float denom = dot(-planeNormal, direction); 
@@ -352,6 +349,29 @@ float waterHeightFunction(vec3 pos, float scale, int depth) {
 	return fbmOff(pos * scale, time, depth) * 0.2 + 0.8;
 }
 
+vec3 getFractColor(float n) {
+	vec3 col = vec3(0);
+    float l = 1./log2;
+    col.x = (1.-cos(l*n))/2.;
+    col.y = (1.-cos(1./(3.*sqrt(2.))*l*n))/2.;
+    col.z = (1.-cos(1./(7.*pow(3., 1./8.))*l*n))/2.;
+
+    return col;
+}
+
+vec2 getJuliaParam(int px, int py, int pz) {
+	/*uint rngb = uint(uint(px) * uint(201254) + uint(py) * uint(19277)+ uint(pz) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
+	float cx = RandomFloat01(rngb);
+	float cy = RandomFloat01(rngb);*/
+
+	float cx = (px - 0) / (256. - 0.);
+	float cy = (pz - 0) / (256. - 0.);
+	cx = cx * 2 - 1.5;
+	cy = cy * 2 - 1;
+
+	return vec2 (cx, cy);
+}
+
 void getMaterial(uint type, vec3 pos, inout Material mat) {
 
 	uint rngb = uint(uint(pos.x) * uint(201254) + uint(pos.y) * uint(19277)+ uint(pos.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
@@ -414,8 +434,7 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 		mat.specular = 0.1;
 		return;
 	}
-
-	if(type == 11) {
+	/*if(type == 11) {
 		vec3 col = vec3(1, 1, 0.5);
 		float d = 1/length(vec3(nco) - vec3(8, 8, 8)) * 8;
 		col *= pow(d, 0.4);
@@ -427,6 +446,50 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 		mat.rmin = 0;
 		mat.tint = vec3(1, 1, 0);
 		addDetails(1, mat, rngb, rngp, pos, 0.01);
+		return;
+	}*/
+	if(type == 11) {
+		vec3 localpos = mod(pos, 1.0);
+
+		float xp = localpos.x;
+		float yp = localpos.z;
+
+		float y = (yp * 3 - 1.5);// * (int(pos.z) % 2 == 0 ? -1 : 1);
+		float x = (xp * 3 - 1.5);// * (int(pos.x) % 2 == 0 ? -1 : 1);
+
+		xp = pow(xp * 2. - 1., 3.) * 0.5 + 0.5;
+		yp = pow(yp * 2. - 1., 3.) * 0.5 + 0.5;
+
+		/*vec2 c1 = getJuliaParam(int(pos.x)  , int(pos.y), int(pos.z)  );
+		vec2 c2 = getJuliaParam(int(pos.x)+1, int(pos.y), int(pos.z)  );
+		vec2 c3 = getJuliaParam(int(pos.x)  , int(pos.y), int(pos.z)+1);
+		vec2 c4 = getJuliaParam(int(pos.x)+1, int(pos.y), int(pos.z)+1);
+		vec2 c12 = mix(c1, c2, xp);
+		vec2 c34 = mix(c3, c4, xp);
+		vec2 c   = mix(c12, c34, yp);*/
+
+		vec2 c = getJuliaParam(int(pos.x)  , int(pos.y), int(pos.z)  );
+
+		localpos = localpos * 2. - 1.;
+
+		//mat.color.xy = c;
+		//return;
+
+		float i;
+
+		for(i=0; i<200; i++) {
+			float nx = x*x-y*y + c.x;
+			float ny = 2*x*y + c.y;
+			x = nx;
+			y = ny;
+
+			if(x*x + y*y > 4.) {
+				i = i + 1. - log((log(x*x+y*y) / 2.) / log2)/log2;
+				break;
+			}
+		}
+		if(i < 200)
+			mat.color = getFractColor(float(i));
 		return;
 	}
 	if(type == 12) {
@@ -442,7 +505,7 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 		return;
 	}
 	if(type == 14) {
-		int depth = 10;
+		int depth = 5;
 		float scale = wt.intensity;
 		float n11 = waterHeightFunction(pos, scale, depth);
 		if(mat.normal.y > 0.5) {
@@ -632,7 +695,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			ncol = mix(ncol, water_fog, 1-throughput1.x);
 			ncol = mix(ncol, air_fog, 1-throughput1.y);
 
-			float amount = wt.reflection;// * FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, obj.mat.rmin, obj.mat.rmax);
+			float amount = wt.reflection;
 
 			endColor = mix(obj.mat.color * illum, ncol * obj.mat.tint, amount);
 		}
@@ -645,7 +708,6 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			if(obj2.hit) {
 				ncol = obj2.mat.color;
 				float illum = max(dot(lightDir, obj2.mat.normal), 0.3);
-				//illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl);
 				ncol *= illum;
 			} else {
 				vec3 sky = texture(skybox, newDir).xyz;
@@ -653,7 +715,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			}
 			ncol = mix(ncol, water_fog, 1-throughput2.x);
 			ncol = mix(ncol, air_fog, 1-throughput2.y);
-			float amount = wt.refraction;// * FresnelReflectAmount(1, 1.6, obj.mat.normal, direction, obj.mat.rmin, obj.mat.rmax);
+			float amount = wt.refraction;
 			endColor = mix(endColor * obj.mat.tint, ncol * obj.mat.tint, amount);
 		}
 	} else {
@@ -665,15 +727,26 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 	return endColor;
 }
 
-void main() {
+vec3 getPixelColor(vec2 fc) {
 	vec3 origin = viewPos;
 	vec2 uv;
-	uv = (gl_FragCoord.xy - .5 * uResolution.xy) / uResolution.y;
+	uv = (fc - .5 * uResolution.xy) / uResolution.y;
 	vec3 dir = normalize(vec3(uv.x, uv.y, 0.4));
     vec3 direction = normalize((vec4(dir, 0) * view).xyz);
 
     viewDir = (vec4(0, 1, 0, 0) * view).xyz;
-	FragColor.xyz += RayTrace(origin, direction).xyz;
+
+	return RayTrace(origin, direction).xyz;
+}
+
+void main() {
+	
+	FragColor.xyz += getPixelColor(gl_FragCoord.xy + 0*vec2( 1,  1) / 3);
+	/*FragColor.xyz += getPixelColor(gl_FragCoord.xy + vec2(-1,  1) / 3);
+	FragColor.xyz += getPixelColor(gl_FragCoord.xy + vec2(-1, -1) / 3);
+	FragColor.xyz += getPixelColor(gl_FragCoord.xy + vec2( 1, -1) / 3);
+
+	FragColor.xyz /= 4;*/
 
 	return;
 }

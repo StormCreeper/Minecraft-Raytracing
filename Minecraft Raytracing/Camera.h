@@ -17,6 +17,7 @@ private:
 	float last_y_;
 	bool first_mouse_;
 public:
+	int speed_mod;
 
 	Camera();
 	Camera(float aspect, v3 pos);

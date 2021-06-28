@@ -91,5 +91,8 @@
     <None Include="vert.glsl">
       <Filter>Fichiers de ressources</Filter>
     </None>
+    <None Include="compute.glsl">
+      <Filter>Fichiers de ressources</Filter>
+    </None>
   </ItemGroup>
 </Project>

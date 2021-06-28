@@ -133,19 +133,19 @@ float getHeight01(vec2 pos, inout float h1, inout float flatness, inout float ri
 
 int getVoxel(ivec3 coords) {
 
-	float h = 464;
+	float h = 256;
 	float h1;
 	float f;
 	float r;
-	float height = getHeight01(coords.xz + vec2(400, 500), h1, f, r) * h;
+	if(coords.y < 128) return 11;
+	else return 0;
+	float height = getHeight01(coords.xz + vec2(190, 300), h1, f, r) * h;
 
-	//float height = (1-abs(fbm(vec3((coords.xz)*0.001, 0), 16))) * h;
-	//height *= pow(fbm(vec3((coords.xz)*0.0001, 0), 2), 2);
 	if(coords.y > height) {
-		float n = 1-abs(fbm(coords * 0.1, 4));
+		float n = 1 - abs(fbm(coords * 0.1, 4));
 		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 210) return n < 0.8 ? 7 : 8;
 		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 210) return n < 0.8 ? 9 : 10;
-		if(coords.x > 80 && coords.x < 100 && coords.z > 140 && coords.z < 160 && coords.y < 210) return 11;
+		if(coords.x > 80 && coords.x < 200 && coords.z > 130 && coords.z < 250 && coords.y < 100) return 11;
 		
 		if(coords.y < 0.2 * h) return 14;
 		return 0;

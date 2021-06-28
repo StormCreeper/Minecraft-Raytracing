@@ -1,5 +1,5 @@
 #include "Camera.h"
-Camera::Camera() : speed_(4.0f), last_x_(0), last_y_(0) {
+Camera::Camera() : speed_(4.0f), speed_mod(0), last_x_(0), last_y_(0) {
 	projection_ = mat44::CreateIdentity();
 	view_ = mat44::CreateIdentity();
 	position = v3(-5, 3, -5);
@@ -14,7 +14,7 @@ Camera::Camera() : speed_(4.0f), last_x_(0), last_y_(0) {
 
 	first_mouse_ = true;
 }
-Camera::Camera(float aspect, const v3 pos) : speed_(14.0f), last_x_(0), last_y_(0) {
+Camera::Camera(float aspect, const v3 pos) : speed_(14.0f), speed_mod(0), last_x_(0), last_y_(0) {
 	projection_ = mat44::CreateIdentity();
 	view_ = mat44::CreateIdentity();
 	position = pos;
@@ -43,7 +43,7 @@ void Camera::updateModel(const unsigned int shader) const
 
 void Camera::updateInput(GLFWwindow* window, const float delta_time, const bool b_paused) {
 	if (!b_paused) {
-		float acc = 1;
+		float acc = 1 * powf(2, speed_mod);
 		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) acc *= 20.0f;
 
 		v3 tmp_front = v3(front.x, 0, front.z).norm();

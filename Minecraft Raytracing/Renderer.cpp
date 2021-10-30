@@ -105,7 +105,7 @@ void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id,
 		return;
 		break;
 
-	default:
+	default: 
 		_severity = (char*)"UNKNOWN";
 		break;
 	}
@@ -126,7 +126,7 @@ bool Renderer::start() {
 
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, 1);
 
-	window_ = glfwCreateWindow(WIDTH, HEIGHT, "Cool raytracing thing", nullptr, nullptr);
+	window_ = glfwCreateWindow(WIDTH, HEIGHT, "Minecraft Raytracing", nullptr, nullptr);
 	if (!window_) {
 		glfwTerminate();
 		return true;
@@ -141,6 +141,8 @@ bool Renderer::start() {
 	ImguiWindowsManager::ImguiInit(window_);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+	glfwSwapInterval(0);
 
 	// SCREEN QUAD CREATION
 

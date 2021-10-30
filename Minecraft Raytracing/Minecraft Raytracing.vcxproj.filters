@@ -65,22 +65,22 @@
     <ClCompile Include="ImguiWindows.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="imgui.cpp">
+    <ClCompile Include="..\Dep\Imgui\imgui_draw.cpp">
       <Filter>Fichiers sources\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_draw.cpp">
+    <ClCompile Include="..\Dep\Imgui\imgui_impl_glfw.cpp">
       <Filter>Fichiers sources\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_glfw.cpp">
+    <ClCompile Include="..\Dep\Imgui\imgui_impl_opengl3.cpp">
       <Filter>Fichiers sources\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_opengl3.cpp">
+    <ClCompile Include="..\Dep\Imgui\imgui_tables.cpp">
       <Filter>Fichiers sources\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_tables.cpp">
+    <ClCompile Include="..\Dep\Imgui\imgui_widgets.cpp">
       <Filter>Fichiers sources\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_widgets.cpp">
+    <ClCompile Include="..\Dep\Imgui\imgui.cpp">
       <Filter>Fichiers sources\imgui</Filter>
     </ClCompile>
   </ItemGroup>

@@ -137,15 +137,15 @@ int getVoxel(ivec3 coords) {
 	float h1;
 	float f;
 	float r;
-	if(coords.y < 128) return 11;
-	else return 0;
+	//if(coords.y < 128) return 11;
+	//else return 0;
 	float height = getHeight01(coords.xz + vec2(190, 300), h1, f, r) * h;
 
 	if(coords.y > height) {
 		float n = 1 - abs(fbm(coords * 0.1, 4));
 		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 210) return n < 0.8 ? 7 : 8;
 		if(coords.x > 70 && coords.x < 90 && coords.z > 100 && coords.z < 120 && coords.y < 210) return n < 0.8 ? 9 : 10;
-		if(coords.x > 80 && coords.x < 200 && coords.z > 130 && coords.z < 250 && coords.y < 100) return 11;
+		//if(coords.x > 80 && coords.x < 200 && coords.z > 130 && coords.z < 250 && coords.y < 100) return 11;
 		
 		if(coords.y < 0.2 * h) return 14;
 		return 0;

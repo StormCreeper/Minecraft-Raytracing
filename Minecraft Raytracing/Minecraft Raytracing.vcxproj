@@ -129,7 +129,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dep\GLEW\include;$(SolutionDir)Dep\glfw\include;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dep\GLEW\include;$(SolutionDir)Dep\glfw\include;$(SolutionDir)Dep\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -149,7 +149,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dep\GLEW\include;$(SolutionDir)Dep\glfw\include;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dep\GLEW\include;$(SolutionDir)Dep\glfw\include;$(SolutionDir)Dep\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>false</StringPooling>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -174,14 +174,14 @@
     <ClInclude Include="VoxelTexture.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_draw.cpp" />
-    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_tables.cpp" />
-    <ClCompile Include="..\..\Cool Test\Cool Test\imgui_widgets.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui_widgets.cpp" />
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="imgui.cpp" />
     <ClCompile Include="ImguiWindows.cpp" />
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_opengl3.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="stb_image.cpp" />

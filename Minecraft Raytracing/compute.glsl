@@ -133,6 +133,8 @@ float getHeight01(vec2 pos, inout float h1, inout float flatness, inout float ri
 
 int getVoxel(ivec3 coords) {
 
+	rngState = uint(uint(coords.x*16) * uint(201254) + uint(coords.y*16) * uint(19277)+ uint(coords.z*16) * uint(9277)) | uint(1);
+
 	float h = 256;
 	float h1;
 	float f;
@@ -148,6 +150,9 @@ int getVoxel(ivec3 coords) {
 		//if(coords.x > 80 && coords.x < 200 && coords.z > 130 && coords.z < 250 && coords.y < 100) return 11;
 		
 		if(coords.y < 0.2 * h) return 14;
+
+		if(RandomFloat01(rngState) < 0.0001) return 15;
+
 		return 0;
 	}
 	if(coords.y > height-3) {

@@ -166,7 +166,7 @@ bool Renderer::start() {
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(0);
 
-	shader = createProgram("vert.glsl", "frag.glsl");
+	shader = createProgram("shader.vert", "shader.frag");
 	glUseProgram(0);
 
 	shader_error = static_cast<char*>(malloc(2048 * sizeof(char)));
@@ -189,15 +189,20 @@ bool Renderer::start() {
 	// 3D VOXEL TEXTURE
 
 	vt.init();
+	miniVt.init();
 
 	double start = glfwGetTime();
 	vt.generateTextureComputed();
 	double end = glfwGetTime();
 
+	miniVt.generateMiniTexture();
+		
 	std::cout << "Texture generation time : " << (end-start)*1000 << " ms\n";
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
 
 	// SETTING CALLBACKS
 
@@ -261,10 +266,14 @@ void Renderer::updateUniforms() {
 
 	setUniformVec2(shader, "uResolution", static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
-	setUniformVec3(shader, "mapSize", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
-
 	setUniformFloat(shader, "uTime", static_cast<float>(glfwGetTime()));
-	setUniformInt(shader, "tex3D", 0);
+
+	setUniformVec3(shader, "mainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
+	setUniformInt(shader, "mainMap.tex", 0);
+
+	setUniformVec3(shader, "miniMap.size", 16, 16, 16);
+	setUniformInt(shader, "miniMap.tex", 2);
+
 	setUniformInt(shader, "skybox", 1);
 
 	setUniformFloat(shader, "wt.intensity", wt.intensity);
@@ -279,6 +288,8 @@ void Renderer::updateUniforms() {
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
 }
 
 bool enter_unpressed = true;

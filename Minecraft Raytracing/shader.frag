@@ -10,10 +10,7 @@ uniform vec3 viewPos;
 uniform vec2 uResolution;
 
 uniform int renderDistance;
-
-uniform vec3 mapSize;
 uniform samplerCube skybox;
-uniform usampler3D tex3D;
 
 uniform float uTime;
 
@@ -29,6 +26,14 @@ struct WaterParameters {
 };
 
 uniform WaterParameters wt;
+
+struct VoxelMap {
+	usampler3D tex;
+	vec3 size;
+};
+
+uniform VoxelMap mainMap;
+uniform VoxelMap miniMap;
 
 uniform float air_absorbance;
 uniform float water_absorbance;
@@ -172,21 +177,21 @@ float RayPlaneIntersection(vec3 origin, vec3 direction, vec3 planeOrigin, vec3 p
     return -1; 
 }
 
-uint testVoxel(int x, int y, int z) {
-	if (x < 0 || y < 0 || z < 0 || x >= mapSize.x || y >= mapSize.y || z >= mapSize.z) return 0;
-	return texture(tex3D, vec3(x, y, z) / mapSize).r;
+uint testVoxel(VoxelMap map, int x, int y, int z) {
+	if (x < 0 || y < 0 || z < 0 || x >= map.size.x || y >= map.size.y || z >= map.size.z) return 0;
+	return texture(map.tex, vec3(x, y, z) / map.size).r;
 }
 
-float projectToCube(vec3 ro, vec3 rd) {
+float projectToCube(VoxelMap map,vec3 ro, vec3 rd) {
 	
 	float tx1 = (0 - ro.x) / rd.x;
-	float tx2 = (mapSize.x - ro.x) / rd.x;
+	float tx2 = (map.size.x - ro.x) / rd.x;
 
 	float ty1 = (0 - ro.y) / rd.y;
-	float ty2 = (mapSize.y - ro.y) / rd.y;
+	float ty2 = (map.size.y - ro.y) / rd.y;
 
 	float tz1 = (0 - ro.z) / rd.z;
-	float tz2 = (mapSize.z - ro.z) / rd.z;
+	float tz2 = (map.size.z - ro.z) / rd.z;
 
 	float tx = max(min(tx1, tx2), 0);
 	float ty = max(min(ty1, ty2), 0);
@@ -197,11 +202,11 @@ float projectToCube(vec3 ro, vec3 rd) {
 	return t;
 }
 
-float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput) {
+float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool recur) {
 	vec3 origin = orig;
-	uint medium = testVoxel(int(origin.x), int(origin.y), int(origin.z));
+	uint medium = testVoxel(map, int(origin.x), int(origin.y), int(origin.z));
 	if(medium != 14) medium = 0;
-	float t1 = max(projectToCube(origin, direction) - epsilon, 0);
+	float t1 = max(projectToCube(map, origin, direction) - epsilon, 0);
 	origin += t1 * direction;
 
 
@@ -250,7 +255,7 @@ float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint b
 	int step = 1;
 
 	for (int i = 0; i < 6000; i++) {
-		if ((mapX >= mapSize.x && stepX > 0) || (mapY >= mapSize.y && stepY > 0) || (mapZ >= mapSize.z && stepZ > 0)) break;
+		if ((mapX >= map.size.x && stepX > 0) || (mapY >= map.size.y && stepY > 0) || (mapZ >= map.size.z && stepZ > 0)) break;
 		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
 
 		if (sideDistX < sideDistY && sideDistX < sideDistZ) {
@@ -270,9 +275,8 @@ float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint b
 		if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
 		if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
 
-		uint block = testVoxel(mapX, mapY, mapZ);
+		uint block = testVoxel(map, mapX, mapY, mapZ);
 		if (block != medium) {
-			hit = 1;
 			if(block != 0) blockType = block;
 			else blockType = medium;
 
@@ -288,6 +292,116 @@ float voxel_traversal(vec3 orig, vec3 direction, inout vec3 normal, inout uint b
 				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z + t1;
 				normal = vec3(0, 0, 1) * -stepZ;
 			}
+
+			break;
+		}
+	}
+
+	return perpWallDist;
+}
+
+float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool recur) {
+	vec3 origin = orig;
+	uint medium = testVoxel(map, int(origin.x), int(origin.y), int(origin.z));
+	if(medium != 14) medium = 0;
+	float t1 = max(projectToCube(map, origin, direction) - epsilon, 0);
+	origin += t1 * direction;
+
+
+	int mapX = int(floor(origin.x));
+	int mapY = int(floor(origin.y));
+	int mapZ = int(floor(origin.z));
+
+	float sideDistX;
+	float sideDistY;
+	float sideDistZ;
+
+	float deltaDX = abs(1 / direction.x);
+	float deltaDY = abs(1 / direction.y);
+	float deltaDZ = abs(1 / direction.z);
+	float perpWallDist = -1;
+
+	int stepX;
+	int stepY;
+	int stepZ;
+
+	int hit = 0;
+	int side;
+
+	if (direction.x < 0) {
+		stepX = -1;
+		sideDistX = (origin.x - mapX) * deltaDX;
+	} else {
+		stepX = 1;
+		sideDistX = (mapX + 1.0 - origin.x) * deltaDX;
+	}
+	if (direction.y < 0) {
+		stepY = -1;
+		sideDistY = (origin.y - mapY) * deltaDY;
+	} else {
+		stepY = 1;
+		sideDistY = (mapY + 1.0 - origin.y) * deltaDY;
+	}
+	if (direction.z < 0) {
+		stepZ = -1;
+		sideDistZ = (origin.z - mapZ) * deltaDZ;
+	} else {
+		stepZ = 1;
+		sideDistZ = (mapZ + 1.0 - origin.z) * deltaDZ;
+	}
+
+	int step = 1;
+
+	for (int i = 0; i < 6000; i++) {
+		if ((mapX >= map.size.x && stepX > 0) || (mapY >= map.size.y && stepY > 0) || (mapZ >= map.size.z && stepZ > 0)) break;
+		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
+
+		if (sideDistX < sideDistY && sideDistX < sideDistZ) {
+			sideDistX += deltaDX;
+			mapX += stepX * step;
+			side = 0;
+		} else if(sideDistY < sideDistX && sideDistY < sideDistZ){
+			sideDistY += deltaDY;
+			mapY += stepY * step;
+			side = 1;
+		} else {
+			sideDistZ += deltaDZ;
+			mapZ += stepZ * step;
+			side = 2;
+		}
+
+		if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
+		if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
+
+		uint block = testVoxel(map, mapX, mapY, mapZ);
+		if (block != medium) {
+			if(block != 0) blockType = block;
+			else blockType = medium;
+
+			if (side == 0) {
+				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x + t1;
+				normal = vec3(1, 0, 0) * -stepX;
+			}
+			else if (side == 1) {
+				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y + t1;
+				normal = vec3(0, 1, 0) * -stepY;
+			}
+			else {
+				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z + t1;
+				normal = vec3(0, 0, 1) * -stepZ;
+			}
+
+			if(recur && block == 15) {
+
+				vec3 newPos = orig + direction * perpWallDist;
+				newPos -= vec3(mapX, mapY, mapZ);
+				newPos *= 16;
+
+				float dist = miniTraversal(miniMap, newPos, direction, normal, blockType, throughput, false);
+				if(dist >= 0) return perpWallDist + dist / 16.0;
+				else continue;
+			}
+
 			break;
 		}
 	}
@@ -310,7 +424,7 @@ struct Material {
 // 3 : vines (parameter : color)
 // 4 : vignette
 
-void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, vec3 pos, float val = 0, vec3 color = vec3(0)) {
+void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, vec3 pos, float val, vec3 color) {
 	//if(length(pos - viewPos) > 100 && (type == 1 || type == 3)) return;
 	ivec3 co = ivec3(pos * 16);
 	ivec3 nco = ivec3(pos * 16) % 16;
@@ -556,9 +670,9 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 		mat.specular = 0.1;
 		addDetails(2, mat, rngb, rngp, pos, 0, ore);
 	}
-	addDetails(0, mat, rngb, rngp, pos, 0.1);
-	addDetails(1, mat, rngb, rngp, pos, 0.1);
-	addDetails(4, mat, rngb, rngp, pos, 0.2);
+	addDetails(0, mat, rngb, rngp, pos, 0.1, vec3(0));
+	addDetails(1, mat, rngb, rngp, pos, 0.1, vec3(0));
+	addDetails(4, mat, rngb, rngp, pos, 0.2, vec3(0));
 	
 		
 	return;
@@ -575,7 +689,7 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 
 	uint blockType = 0;
 
-	float t = voxel_traversal(origin, direction, obj.mat.normal, blockType, throughput);
+	float t = voxel_traversal(mainMap, origin, direction, obj.mat.normal, blockType, throughput, true);
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
@@ -587,7 +701,7 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput) {
 	vec3 norm;
 	uint bt;
-	float t = voxel_traversal(origin, direction, norm, bt, throughput);
+	float t = voxel_traversal(mainMap, origin, direction, norm, bt, throughput, true);
 
 	return t>0 ? 0.5 : 1;
 }

@@ -1,4 +1,5 @@
 #include "VoxelTexture.h"
+#include "VoxelTexture.h"
 #include "utils.h"
 #include <iostream>
 #include <GLFW/glfw3.h>
@@ -67,6 +68,14 @@ void VoxelTexture::generateTextureComputed() {
 	glUseProgram(0);
 
 	glCheckError();
+}
+
+void VoxelTexture::generateMiniTexture() {
+	ldim[0] = 16;
+	ldim[1] = 16;
+	ldim[2] = 16;
+
+	generateTextureComputed();
 }
 
 VoxelTexture::~VoxelTexture() {

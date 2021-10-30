@@ -38,6 +38,7 @@ public:
 	Camera camera;
 
 	VoxelTexture vt;
+	VoxelTexture miniVt;
 
 	char* shader_error;
 

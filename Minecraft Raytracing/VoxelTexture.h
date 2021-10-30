@@ -19,6 +19,7 @@ public:
 	void init();
 
 	void generateTextureComputed();
+	void generateMiniTexture();
 
 
 	~VoxelTexture();

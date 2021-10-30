@@ -42,6 +42,8 @@ out vec4 FragColor;
 
 #define PI 3.141592653589793238462643383279
 
+float blockNum = 128;
+
 float tseed = 0;
 uint rngState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 
@@ -206,9 +208,6 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 	vec3 origin = orig;
 	uint medium = testVoxel(map, int(origin.x), int(origin.y), int(origin.z));
 	if(medium != 14) medium = 0;
-	float t1 = max(projectToCube(map, origin, direction) - epsilon, 0);
-	origin += t1 * direction;
-
 
 	int mapX = int(floor(origin.x));
 	int mapY = int(floor(origin.y));
@@ -281,15 +280,15 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 			else blockType = medium;
 
 			if (side == 0) {
-				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x + t1;
+				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x;
 				normal = vec3(1, 0, 0) * -stepX;
 			}
 			else if (side == 1) {
-				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y + t1;
+				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y;
 				normal = vec3(0, 1, 0) * -stepY;
 			}
 			else {
-				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z + t1;
+				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z;
 				normal = vec3(0, 0, 1) * -stepZ;
 			}
 
@@ -300,9 +299,32 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 	return perpWallDist;
 }
 
-float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool recur) {
+float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, inout float scale, bool recur) {
 	vec3 origin = orig;
 	uint medium = testVoxel(map, int(origin.x), int(origin.y), int(origin.z));
+	if(medium == 15 && recur) {
+
+		vec3 newPos = orig;
+		newPos -= vec3(int(orig.x), int(orig.y), int(orig.z));
+		newPos *= blockNum;
+
+		uint nBlockType = 0;
+		vec3 nNormal = vec3(0);
+		vec3 nThroughput = vec3(1);
+
+		float dist = miniTraversal(miniMap, newPos, direction, nNormal, nBlockType, nThroughput, false);
+		if(dist >= 0) {
+			scale = blockNum;
+			normal = nNormal;
+			throughput *= nThroughput;
+			blockType = nBlockType;
+			return dist / blockNum;
+		}
+		else {
+			blockType = 0;
+			normal = vec3(0);
+		}
+	}
 	if(medium != 14) medium = 0;
 	float t1 = max(projectToCube(map, origin, direction) - epsilon, 0);
 	origin += t1 * direction;
@@ -395,11 +417,25 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 
 				vec3 newPos = orig + direction * perpWallDist;
 				newPos -= vec3(mapX, mapY, mapZ);
-				newPos *= 16;
+				newPos *= blockNum;
 
-				float dist = miniTraversal(miniMap, newPos, direction, normal, blockType, throughput, false);
-				if(dist >= 0) return perpWallDist + dist / 16.0;
-				else continue;
+				uint nBlockType = 0;
+				vec3 nNormal = vec3(0);
+				vec3 nThroughput = vec3(1);
+
+				float dist = miniTraversal(miniMap, newPos, direction, nNormal, nBlockType, nThroughput, false);
+				if(dist >= 0) {
+					scale = blockNum;
+					normal = nNormal;
+					throughput *= nThroughput;
+					blockType = nBlockType;
+					return perpWallDist + dist / blockNum;
+				}
+				else {
+					blockType = 0;
+					normal = vec3(0);
+					continue;
+				}
 			}
 
 			break;
@@ -424,10 +460,10 @@ struct Material {
 // 3 : vines (parameter : color)
 // 4 : vignette
 
-void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, vec3 pos, float val, vec3 color) {
+void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, vec3 pos, float val, vec3 color, float scale) {
 	//if(length(pos - viewPos) > 100 && (type == 1 || type == 3)) return;
-	ivec3 co = ivec3(pos * 16);
-	ivec3 nco = ivec3(pos * 16) % 16;
+	ivec3 co = ivec3(pos * 16 * scale);
+	ivec3 nco = ivec3(pos * 16 * scale) % 16;
 	switch(type) {
 	case 0:
 		mat.color *= (RandomFloat01(rngb)*2-1) * val + 1;
@@ -486,13 +522,13 @@ vec2 getJuliaParam(int px, int py, int pz) {
 	return vec2 (cx, cy);
 }
 
-void getMaterial(uint type, vec3 pos, inout Material mat) {
+void getMaterial(uint type, vec3 pos, inout Material mat, float scale) {
 
-	uint rngb = uint(uint(pos.x) * uint(201254) + uint(pos.y) * uint(19277)+ uint(pos.z) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
-	uint rngp = uint(uint(pos.x*16) * uint(201254) + uint(pos.y*16) * uint(19277)+ uint(pos.z*16) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
+	uint rngb = uint(uint(pos.x * scale) * uint(201254) + uint(pos.y * scale) * uint(19277)+ uint(pos.z * scale) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
+	uint rngp = uint(uint(pos.x * 16 * scale) * uint(201254) + uint(pos.y * 16 * scale) * uint(19277)+ uint(pos.z * 16 * scale) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 
-	ivec3 co = ivec3(pos * 16);
-	ivec3 nco = ivec3(pos * 16) % 16;
+	ivec3 co = ivec3(pos * 16 * scale);
+	ivec3 nco = ivec3(pos * 16 * scale) % 16;
 
 	if(type == 7 || type == 8) {
 		vec3 ba = vec3(0.9, 0.4, 0.3);
@@ -526,7 +562,7 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 			mat.color = (ba + vec3(RandomFloat01(rngp)) * 0.1) * (1.7-pow(float(vam + 5) / 13, 0.7));
 		}
 
-		if(type == 8) addDetails(3, mat, rngb, rngp, pos, 0.1, vec3(0.2, 0.5, 0.1));
+		if(type == 8) addDetails(3, mat, rngb, rngp, pos, 0.1, vec3(0.2, 0.5, 0.1), scale);
 
 		mat.specular = 0.1;
 
@@ -543,7 +579,7 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 
 		mat.normal = normalize(mat.normal + 0.1 * vec3(cos(noise*3), sin(noise*3), cos(noise*3 + 0.3)) + 0.05 * vec3(RandomFloat01(rngp)*2-1, RandomFloat01(rngp)*2-1, RandomFloat01(rngp)*2-1));
 
-		if(type == 10) addDetails(3, mat, rngb, rngp, pos, 0.1, vec3(0.2, 0.5, 0.1));
+		if(type == 10) addDetails(3, mat, rngb, rngp, pos, 0.1, vec3(0.2, 0.5, 0.1), scale);
 
 		mat.specular = 0.1;
 		return;
@@ -620,11 +656,11 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	}
 	if(type == 14) {
 		int depth = 5;
-		float scale = wt.intensity;
-		float n11 = waterHeightFunction(pos, scale, depth);
+		float s = wt.intensity;
+		float n11 = waterHeightFunction(pos * scale, s, depth);
 		if(mat.normal.y > 0.5) {
-			float n12 = waterHeightFunction(pos + vec3(1, 0, 0), scale, depth);
-			float n21 = waterHeightFunction(pos + vec3(0, 0, 1), scale, depth);
+			float n12 = waterHeightFunction(pos*scale + vec3(1, 0, 0), s, depth);
+			float n21 = waterHeightFunction(pos*scale + vec3(0, 0, 1), s, depth);
 
 			mat.normal = -normalize(cross(vec3(1, n12 - n11, 0),vec3(0, n21-n11, 1)));
 		}
@@ -668,11 +704,11 @@ void getMaterial(uint type, vec3 pos, inout Material mat) {
 	if(type == 3) mat.specular = 0.1;
 	if(type==4 || type==5 || type==6) {
 		mat.specular = 0.1;
-		addDetails(2, mat, rngb, rngp, pos, 0, ore);
+		addDetails(2, mat, rngb, rngp, pos, 0, ore, scale);
 	}
-	addDetails(0, mat, rngb, rngp, pos, 0.1, vec3(0));
-	addDetails(1, mat, rngb, rngp, pos, 0.1, vec3(0));
-	addDetails(4, mat, rngb, rngp, pos, 0.2, vec3(0));
+	addDetails(0, mat, rngb, rngp, pos, 0.1, vec3(0), scale);
+	addDetails(1, mat, rngb, rngp, pos, 0.1, vec3(0), scale);
+	addDetails(4, mat, rngb, rngp, pos, 0.2, vec3(0), scale);
 	
 		
 	return;
@@ -684,24 +720,24 @@ struct HitObj {
 	bool hit;
 };
 
-void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throughput) {
+void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throughput, inout float scale) {
 	obj.hit = false;
 
 	uint blockType = 0;
 
-	float t = voxel_traversal(mainMap, origin, direction, obj.mat.normal, blockType, throughput, true);
+	float t = voxel_traversal(mainMap, origin, direction, obj.mat.normal, blockType, throughput, scale, true);
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
-		getMaterial(blockType, obj.hitPoint, obj.mat);
+		getMaterial(blockType, obj.hitPoint, obj.mat, scale);
 		obj.hit = true;
 	}
 }
 
-float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput) {
+float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput, inout float scale) {
 	vec3 norm;
 	uint bt;
-	float t = voxel_traversal(mainMap, origin, direction, norm, bt, throughput, true);
+	float t = voxel_traversal(mainMap, origin, direction, norm, bt, throughput, scale, false);
 
 	return t>0 ? 0.5 : 1;
 }
@@ -723,32 +759,6 @@ vec3 getSkyColor(vec3 dir) {
 	return color;
 }
 
-vec3 getInfoFrom(vec3 origin, vec3 direction, inout HitObj obj) {
-	vec3 endColor = vec3(1);
-
-	vec3 throughput = vec3(1);
-	vec3 throughputl = vec3(1);
-
-	SendOneRay(origin, direction, obj, throughput);
-	if(obj.hit) {
-		float illum = 1.0;
-		illum = max(dot(lightDir, obj.mat.normal), 0.3);
-		illum += obj.mat.specular * 5 *max(pow(dot(reflect(lightDir,obj.mat.normal), normalize(direction)), 128), 0);
-
-		illum *= SendLightRay(obj.hitPoint + obj.mat.normal * epsilon, lightDir, throughputl);
-		
-		endColor = obj.mat.color * illum;
-
-	} else {
-		vec3 sky = texture(skybox, direction).xyz;
-		endColor *= sky;
-	}
-
-	endColor = mix(endColor, water_fog, 1-throughput.x);
-	endColor = mix(endColor, air_fog, 1-throughput.y);
-
-	return endColor;
-}
 void fresnel(vec3 I, vec3 N, float ior, inout float kr)  {
     float cosi = clamp(-1, 1, dot(I, N)); 
     float etai = 1, etat = ior; 
@@ -780,14 +790,17 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 
 	vec3 throughput = vec3(1);
 	vec3 throughputl = vec3(1);
+
+	float scale = 1;
+	float lscale = 1;
 	
-	SendOneRay(origin, direction, obj, throughput);
+	SendOneRay(origin, direction, obj, throughput, scale);
 	if(obj.hit) {
 		float illum = 1.0;
 		illum = max(dot(lightDir, obj.mat.normal), 0.3);
 		illum += obj.mat.specular * 5 *max(pow(dot(reflect(lightDir,obj.mat.normal), normalize(direction)), 128), 0);
 
-		illum *= SendLightRay(obj.hitPoint + obj.mat.normal * epsilon, lightDir, throughputl);
+		illum *= SendLightRay(obj.hitPoint + obj.mat.normal * epsilon, lightDir, throughputl, lscale);
 		
 		if(obj.mat.rmax == 0 && obj.mat.transparent == 0) {
 			endColor = obj.mat.color * illum;
@@ -796,12 +809,12 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			HitObj obj2;
 			vec3 newDir = reflect(direction, obj.mat.normal);
 			vec3 throughput1 = throughput;
-			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput1);
+			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput1, lscale);
 			vec3 ncol;
 			if(obj2.hit) {
 				ncol = obj2.mat.color;
 				float illum = max(dot(lightDir, obj2.mat.normal), 0.3);
-				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl);
+				illum *= SendLightRay(obj2.hitPoint + obj2.mat.normal * epsilon, lightDir, throughputl, lscale);
 				ncol *= illum;
 			} else {
 				ncol = getSkyColor(newDir);
@@ -817,7 +830,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			HitObj obj2;
 			vec3 newDir = normalize(refract(direction, obj.mat.normal, 1./wt.ior));
 			vec3 throughput2 = throughput;
-			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2);
+			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2, lscale);
 			vec3 ncol;
 			if(obj2.hit) {
 				ncol = obj2.mat.color;

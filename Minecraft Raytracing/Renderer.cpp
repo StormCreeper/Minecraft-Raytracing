@@ -271,7 +271,7 @@ void Renderer::updateUniforms() {
 	setUniformVec3(shader, "mainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
 	setUniformInt(shader, "mainMap.tex", 0);
 
-	setUniformVec3(shader, "miniMap.size", 16, 16, 16);
+	setUniformVec3(shader, "miniMap.size", 128, 128, 128);
 	setUniformInt(shader, "miniMap.tex", 2);
 
 	setUniformInt(shader, "skybox", 1);

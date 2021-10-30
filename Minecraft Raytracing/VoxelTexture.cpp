@@ -71,9 +71,9 @@ void VoxelTexture::generateTextureComputed() {
 }
 
 void VoxelTexture::generateMiniTexture() {
-	ldim[0] = 16;
-	ldim[1] = 16;
-	ldim[2] = 16;
+	ldim[0] = 128;
+	ldim[1] = 128;
+	ldim[2] = 128;
 
 	generateTextureComputed();
 }

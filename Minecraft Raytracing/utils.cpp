@@ -1,5 +1,4 @@
 #include "utils.h"
-#include "stb_image.h"
 #include <iostream>
 
 unsigned int createShader(unsigned int shader_type, const char* shader_source, char** info) {
@@ -53,34 +52,6 @@ unsigned int createProgram(unsigned int vertex_shader, unsigned int fragment_sha
 	glDeleteShader(fragment_shader);
 
 	return shader_program;
-}
-
-unsigned int loadCubemap(std::vector<std::string> faces) {
-	unsigned int textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-	int width, height, nrChannels;
-	for (unsigned int i = 0; i < faces.size(); i++) {
-		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-		if (data) {
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
-			);
-			stbi_image_free(data);
-		}
-		else {
-			std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
-			stbi_image_free(data);
-		}
-	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	return textureID;
 }
 
 char* readSource(const char* filename) {
@@ -146,26 +117,4 @@ void setUniformFloat(const unsigned int shader, const char* name, const float va
 }
 void setUniformFloat(const unsigned int shader, const int location, const float value) {
 	glUniform1f(location, value);
-}
-
-
-float lerp(const float a, const float b, const float c) {
-	return a + c * (b - a);
-}
-
-GLenum glCheckError_(const char* file, const int line) {
-	GLenum error_code;
-	while ((error_code = glGetError()) != GL_NO_ERROR) {
-		std::string error;
-		switch (error_code) {
-		case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
-		case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
-		case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
-		case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
-		case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
-		default: break;
-		}
-		std::cout << error << " | " << file << " (" << line << ")" << std::endl;
-	}
-	return error_code;
 }

@@ -13,9 +13,7 @@ void windowResizeCallback(GLFWwindow* window, const int width, const int height)
 	glViewport(0, 0, width, height);
 	renderer_ptr->setWidthHeight(width, height);
 }
-void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id,
-	GLenum severity, GLsizei length,
-	const GLchar* msg, const void* data)
+void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* data)
 {
 	char* _source;
 	char* _type;
@@ -171,37 +169,26 @@ bool Renderer::start() {
 
 	shader_error = static_cast<char*>(malloc(2048 * sizeof(char)));
 
-	const std::vector<std::string> faces{
-	   "skybox/right.jpg",
-	   "skybox/left.jpg",
-	   "skybox/top.jpg",
-	   "skybox/bottom.jpg",
-	   "skybox/front.jpg",
-	   "skybox/back.jpg"
-	};
-	cube_texture = loadCubemap(faces);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cube_texture);
-
 	glActiveTexture(GL_TEXTURE0);
 
 	// 3D VOXEL TEXTURE
 
-	vt.init();
-	miniVt.init();
+	vt.init(256, 256, 256);
+	miniVt.init(128, 128, 128);
 
 	double start = glfwGetTime();
 	vt.generateTextureComputed();
 	double end = glfwGetTime();
 
-	miniVt.generateMiniTexture();
-		
+	miniVt.LoadFromVoxFile("Vox/teapot.vox");
+	//miniVt.generateMiniTexture();
+	//miniVt.generateTextureComputed();
+
 	std::cout << "Texture generation time : " << (end-start)*1000 << " ms\n";
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
-	glActiveTexture(GL_TEXTURE2);
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
 
 	// SETTING CALLBACKS
@@ -223,7 +210,6 @@ bool Renderer::start() {
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &vbo);
 	glDeleteProgram(shader);
-	glDeleteTextures(1, &cube_texture);
 	free(shader_error);
 
 	return false;
@@ -271,10 +257,10 @@ void Renderer::updateUniforms() {
 	setUniformVec3(shader, "mainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
 	setUniformInt(shader, "mainMap.tex", 0);
 
-	setUniformVec3(shader, "miniMap.size", 128, 128, 128);
-	setUniformInt(shader, "miniMap.tex", 2);
+	setUniformVec3(shader, "miniMap.size", blockScale, blockScale, blockScale);
+	setUniformInt(shader, "miniMap.tex", 1);
 
-	setUniformInt(shader, "skybox", 1);
+	setUniformFloat(shader, "blockNum", float(blockScale));
 
 	setUniformFloat(shader, "wt.intensity", wt.intensity);
 	setUniformVec2(shader, "wt.speed", wt.speed[0], wt.speed[1]);
@@ -286,9 +272,17 @@ void Renderer::updateUniforms() {
 	setUniformFloat(shader, "air_absorbance", air_absorbance);
 	setUniformFloat(shader, "water_absorbance", water_absorbance);
 
+	for (int i = 0; i < 256; i++) {
+		string s = "palette[";
+		s += std::to_string(i);
+		s += "]";
+		setUniformVec3(shader, s.c_str(), miniVt.palette[i]);
+	}
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
-	glActiveTexture(GL_TEXTURE2);
+
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
 }
 
@@ -342,7 +336,6 @@ void Renderer::reloadShaders() {
 
 
 	glUseProgram(shader);
-	glCheckError();
 }
 
 // GETTERS AND SETTERS

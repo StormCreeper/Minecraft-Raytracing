@@ -5,14 +5,10 @@
 #include <string>
 #include "vf3dMat44.h"
 
-#define glCheckError() glCheckError_(__FILE__, __LINE__)
-
 unsigned int createShader(unsigned int shader_type, const char* shader_source, char** info = nullptr);
 unsigned int createProgram(unsigned int vertex_shader, unsigned int fragment_shader);
 unsigned int createProgram(const char* vert_name, const char* frag_name, char** info = nullptr);
 void createProgram(unsigned int* shader, unsigned int vertex_shader, unsigned int fragment_shader);
-
-unsigned int loadCubemap(std::vector<std::string> faces);
 
 char* readSource(const char* filename);
 
@@ -32,7 +28,3 @@ void setUniformInt(unsigned int shader, int location, int value);
 
 void setUniformFloat(unsigned int shader, const char* name, float value);
 void setUniformFloat(unsigned int shader, int location, float value);
-
-float lerp(float a, float b, float c);
-
-GLenum glCheckError_(const char* file, int line);

@@ -33,8 +33,6 @@ public:
 	unsigned int shader;
 	unsigned int vbo, vao;
 
-	unsigned int cube_texture;
-
 	Camera camera;
 
 	VoxelTexture vt;
@@ -45,6 +43,8 @@ public:
 	bool drawWindows = true;
 	bool rcp;
 	bool rfp;
+
+	int blockScale = 128;
 
 	WaterParameters wt = {
 		0.1, {0.5, 0.3}, 1, 0.8, 0.7, 1.3

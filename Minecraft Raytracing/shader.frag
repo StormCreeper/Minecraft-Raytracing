@@ -10,7 +10,6 @@ uniform vec3 viewPos;
 uniform vec2 uResolution;
 
 uniform int renderDistance;
-uniform samplerCube skybox;
 
 uniform float uTime;
 
@@ -42,7 +41,9 @@ out vec4 FragColor;
 
 #define PI 3.141592653589793238462643383279
 
-float blockNum = 128;
+uniform float blockNum;
+
+uniform vec3[256] palette;
 
 float tseed = 0;
 uint rngState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
@@ -299,7 +300,7 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 	return perpWallDist;
 }
 
-float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, inout float scale, bool recur) {
+float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, inout float scale, bool recur, inout bool mini) {
 	vec3 origin = orig;
 	uint medium = testVoxel(map, int(origin.x), int(origin.y), int(origin.z));
 	if(medium == 15 && recur) {
@@ -318,6 +319,9 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 			normal = nNormal;
 			throughput *= nThroughput;
 			blockType = nBlockType;
+
+			mini = true;
+
 			return dist / blockNum;
 		}
 		else {
@@ -415,7 +419,7 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 
 			if(recur && block == 15) {
 
-				vec3 newPos = orig + direction * perpWallDist;
+				vec3 newPos = orig + direction * (perpWallDist- epsilon);
 				newPos -= vec3(mapX, mapY, mapZ);
 				newPos *= blockNum;
 
@@ -429,11 +433,15 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 					normal = nNormal;
 					throughput *= nThroughput;
 					blockType = nBlockType;
+
+					mini = true;
+
 					return perpWallDist + dist / blockNum;
 				}
 				else {
 					blockType = 0;
 					normal = vec3(0);
+					perpWallDist = -1;
 					continue;
 				}
 			}
@@ -724,12 +732,17 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 	obj.hit = false;
 
 	uint blockType = 0;
+	bool mini = false;
 
-	float t = voxel_traversal(mainMap, origin, direction, obj.mat.normal, blockType, throughput, scale, true);
+	float t = voxel_traversal(mainMap, origin, direction, obj.mat.normal, blockType, throughput, scale, true, mini);
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
-		getMaterial(blockType, obj.hitPoint, obj.mat, scale);
+		if(mini) {
+			obj.mat.color = palette[blockType];
+		} else {
+			getMaterial(blockType, obj.hitPoint, obj.mat, scale);
+		}
 		obj.hit = true;
 	}
 }
@@ -737,7 +750,8 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput, inout float scale) {
 	vec3 norm;
 	uint bt;
-	float t = voxel_traversal(mainMap, origin, direction, norm, bt, throughput, scale, false);
+	bool mini = false;
+	float t = voxel_traversal(mainMap, origin, direction, norm, bt, throughput, scale, true, mini);
 
 	return t>0 ? 0.5 : 1;
 }
@@ -837,8 +851,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 				float illum = max(dot(lightDir, obj2.mat.normal), 0.3);
 				ncol *= illum;
 			} else {
-				vec3 sky = texture(skybox, newDir).xyz;
-				ncol = sky;
+				ncol = getSkyColor(newDir);
 			}
 			ncol = mix(ncol, water_fog, 1-throughput2.x);
 			ncol = mix(ncol, air_fog, 1-throughput2.y);

@@ -3,33 +3,25 @@
 #include "utils.h"
 #include <iostream>
 #include <GLFW/glfw3.h>
+#define OGT_VOX_IMPLEMENTATION
+#include "ogt_vox.h"
 
 VoxelTexture::VoxelTexture() {
-	dim[0] = 256;
-	dim[1] = 256;
-	dim[2] = 256;
-
-	ldim[0] = 256;
-	ldim[1] = 256;
-	ldim[2] = 256;
-
 	texture_id = 0;
 	shader_id = 0;
 }
 
-void VoxelTexture::init() {
+void VoxelTexture::init(int w, int h, int d) {
+
+	dim[0] = w;
+	dim[1] = h;
+	dim[2] = d;
+}
+
+void VoxelTexture::generateTextureComputed() {
 
 	if (shader_id) glDeleteProgram(shader_id);
 
-	if (!texture_id) {
-		glGenTextures(1, &texture_id);
-
-		glBindTexture(GL_TEXTURE_3D, texture_id);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
-	}
 	char* shaderSource = readSource("compute.glsl");
 	unsigned int compute_shader = createShader(GL_COMPUTE_SHADER, shaderSource);
 
@@ -42,23 +34,19 @@ void VoxelTexture::init() {
 	glAttachShader(shader_id, compute_shader);
 	glLinkProgram(shader_id);
 	glDeleteShader(compute_shader);
-}
-
-void VoxelTexture::generateTextureComputed() {
-
-	glCheckError();
-
-	if (ldim[0] != dim[0] || dim[1] != ldim[1] || ldim[2] != dim[2]) {
-		glBindTexture(GL_TEXTURE_3D, texture_id);
-		glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
-		for (int i = 0; i < 3; i++) ldim[i] = dim[i];
-	}
 
 	glUseProgram(shader_id);
 
-	setUniformFloat(shader_id, "iTime", glfwGetTime());
+	if (!texture_id) {
+		glGenTextures(1, &texture_id);
+	}
 
 	glBindTexture(GL_TEXTURE_3D, texture_id);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
+
 	glBindImageTexture(0, texture_id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8UI);
 	glDispatchCompute(dim[0]/16, dim[1]/16, dim[2]/4);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -67,21 +55,101 @@ void VoxelTexture::generateTextureComputed() {
 
 	glUseProgram(0);
 
-	glCheckError();
+	free(data);
+}
+
+int index(int x, int y, int z, int w, int h, int d) {
+	return x + y * w + z * (w * h);
 }
 
 void VoxelTexture::generateMiniTexture() {
-	ldim[0] = 128;
-	ldim[1] = 128;
-	ldim[2] = 128;
+	srand(192901);
 
-	generateTextureComputed();
+	data = static_cast<unsigned char*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
+
+	for (int x = 0; x < dim[0]; x++) {
+		for (int y = 0; y < dim[1]; y++) {
+			for (int z = 0; z < dim[2]; z++) {
+				data[index(x, y, z, dim[0], dim[1], dim[2])] = rand() % 256;
+			}
+		}
+	}
+	if (!texture_id) {
+		glGenTextures(1, &texture_id);
+	}
+	glBindTexture(GL_TEXTURE_3D, texture_id);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+
+	free(data);
+}
+
+void VoxelTexture::LoadFromVoxFile(const char* filename) {
+
+	if (!texture_id) {
+		glGenTextures(1, &texture_id);
+	}
+
+	FILE* fp;
+	fopen_s(&fp, filename, "rb");
+
+	if (!fp) {
+		std::cerr << "Error opening the file " << filename << "\n";
+		return;
+	}
+
+	fseek(fp, 0, SEEK_END);
+	long buffer_size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	uint8_t* buffer = new uint8_t[buffer_size];
+
+	fread(buffer, buffer_size, 1, fp);
+	fclose(fp);
+
+	const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
+	delete[] buffer;
+
+	dim[0] = scene->models[0]->size_x;
+	dim[1] = scene->models[0]->size_y;
+	dim[2] = scene->models[0]->size_z;
+
+	data = (unsigned char*)malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int));
+
+	if (!data) {
+		std::cerr << "Unable to allocate enough memory\n";
+		return;
+	}
+	for (int x = 0; x < dim[0]; x++) {
+		for (int z = 0; z < dim[2]; z++) {
+			for (int y = 0; y < dim[1]; y++) {
+				unsigned int color_index = scene->models[0]->voxel_data[index(x, z, y, dim[0], dim[2], dim[1])];
+				int i = index(x, y, z, dim[0], dim[1], dim[2]);
+				
+				data[i] = color_index;
+			}
+		}
+	}
+
+	for (int i = 0; i < 256; i++) {
+		ogt_vox_rgba color = scene->palette.color[i];
+		palette[i] = v3((float)color.r / 255.0f, (float)color.g / 255.0f, (float)color.b / 255.0f);
+	}
+
+	ogt_vox_destroy_scene(scene);
+
+	glBindTexture(GL_TEXTURE_3D, texture_id);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+
+	glBindTexture(GL_TEXTURE_3D, 0);
+	free(data);
 }
 
 VoxelTexture::~VoxelTexture() {
 	glDeleteTextures(1, &texture_id);
 	glDeleteProgram(shader_id);
-
-	if(data != nullptr)
-		free(data);
 }

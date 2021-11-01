@@ -46,6 +46,7 @@ void DebugWindowCubeDimensions(Renderer& R) {
     ImGui::Text("Scene parameters");
     
     ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 2048);
+    ImGui::SliderInt("Block Scale", &R.blockScale, 16, 256);
 
     ImGui::Text("Water");
 
@@ -68,6 +69,7 @@ void DebugWindowDebugInfo(Renderer& R) {
     ImGui::Begin("Debug Info");
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("Position : (%.1f, %.1f, %.1f)", R.camera.position.x, R.camera.position.y, R.camera.position.z);
 
     ImGui::End();
 
@@ -76,7 +78,7 @@ void DebugWindowDebugInfo(Renderer& R) {
     ImGui::Checkbox("Compute shader", &R.rcp);
     if (ImGui::Button("Reload Shaders")) {
         if (R.rcp) {
-            R.vt.init();
+            //R.vt.init(R.vt.dim[0]);
             R.vt.generateTextureComputed();
         }
         if(R.rfp) R.reloadShaders();

@@ -167,8 +167,8 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ImguiWindows.h" />
+    <ClInclude Include="ogt_vox.h" />
     <ClInclude Include="Renderer.h" />
-    <ClInclude Include="stb_image.h" />
     <ClInclude Include="utils.h" />
     <ClInclude Include="vf3dMat44.h" />
     <ClInclude Include="VoxelTexture.h" />
@@ -184,7 +184,6 @@
     <ClCompile Include="ImguiWindows.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer.cpp" />
-    <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="utils.cpp" />
     <ClCompile Include="vf3d.cpp" />
     <ClCompile Include="VoxelTexture.cpp" />

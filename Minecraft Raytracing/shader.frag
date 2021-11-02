@@ -272,8 +272,8 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 			side = 2;
 		}
 
-		if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
-		if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
+		//if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
+		//if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
 
 		uint block = testVoxel(map, mapX, mapY, mapZ);
 		if (block != medium) {
@@ -425,13 +425,12 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 
 				uint nBlockType = 0;
 				vec3 nNormal = vec3(0);
-				vec3 nThroughput = vec3(1);
 
-				float dist = miniTraversal(miniMap, newPos, direction, nNormal, nBlockType, nThroughput, false);
+				float dist = miniTraversal(miniMap, newPos, direction, nNormal, nBlockType, throughput, false);
+
 				if(dist >= 0) {
 					scale = blockNum;
 					normal = nNormal;
-					throughput *= nThroughput;
 					blockType = nBlockType;
 
 					mini = true;
@@ -738,7 +737,7 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
-		if(mini) {
+		if(mini && false) {
 			obj.mat.color = palette[blockType];
 		} else {
 			getMaterial(blockType, obj.hitPoint, obj.mat, scale);
@@ -811,7 +810,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 	SendOneRay(origin, direction, obj, throughput, scale);
 	if(obj.hit) {
 		float illum = 1.0;
-		illum = max(dot(lightDir, obj.mat.normal), 0.3);
+		illum = max(dot(lightDir, obj.mat.normal), 0.4);
 		illum += obj.mat.specular * 5 *max(pow(dot(reflect(lightDir,obj.mat.normal), normalize(direction)), 128), 0);
 
 		illum *= SendLightRay(obj.hitPoint + obj.mat.normal * epsilon, lightDir, throughputl, lscale);
@@ -835,6 +834,8 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			}
 			ncol = mix(ncol, water_fog, 1-throughput1.x);
 			ncol = mix(ncol, air_fog, 1-throughput1.y);
+
+			ncol *= throughput1;
 
 			float amount = wt.reflection;
 

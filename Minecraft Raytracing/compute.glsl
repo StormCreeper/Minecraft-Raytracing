@@ -143,6 +143,9 @@ int getVoxel(ivec3 coords) {
 	//else return 0;
 	float height = getHeight01(coords.xz + vec2(190, 300), h1, f, r) * h;
 
+	if(coords.y > height && coords.y < height + 1) {
+		if(RandomFloat01(rngState) < 0.05) return 15;
+	}
 	if(coords.y > height) {
 		float n = 1 - abs(fbm(coords * 0.1, 4));
 		if(coords.x > 110 && coords.x < 130 && coords.z > 110 && coords.z < 130 && coords.y < 210) return n < 0.8 ? 7 : 8;
@@ -151,17 +154,17 @@ int getVoxel(ivec3 coords) {
 		
 		if(coords.y < 0.2 * h) return 14;
 
-		if(RandomFloat01(rngState) < 0.0001) return 15;
-
 		return 0;
 	}
+	
 	if(coords.y > height-3) {
 		//if(r > 0.6) return 14;
 		float n = fbm(vec3(coords.xz, 0)*0.05, 4);
 		if(h1*h > n * 8 + 0.90 * h) return 12;
 		if(h1*h > n * 18 + 0.85 * h) return 3;
 		if(h1*h > n * 18 + 0.80 * h) return 2;
-		return r >= 0.55 ? 13 : 1;
+		if(r >= 0.55) return 13;
+		return 1;
 	} 
 	if(coords.y > height-7) return 2;
 

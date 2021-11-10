@@ -17,6 +17,8 @@ void setUniformM4(unsigned int shader, int loc, mat44 matrix);
 
 void setUniformVec3(unsigned int shader, const char* name, float x, float y, float z);
 void setUniformVec3(unsigned int shader, int location, float x, float y, float z);
+void setUniformVec3i(unsigned int shader, const char* name, int x, int y, int z);
+void setUniformVec3i(unsigned int shader, int location, int x, int y, int z);
 
 void setUniformVec3(unsigned int shader, const char* name, v3 vector);
 

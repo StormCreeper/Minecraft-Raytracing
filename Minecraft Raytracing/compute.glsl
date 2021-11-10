@@ -144,7 +144,7 @@ int getVoxel(ivec3 coords) {
 	float height = getHeight01(coords.xz + vec2(190, 300), h1, f, r) * h;
 
 	if(coords.y > height && coords.y < height + 1) {
-		if(RandomFloat01(rngState) < 0.05) return 15;
+		//if(RandomFloat01(rngState) < 0.05) return 15;
 	}
 	if(coords.y > height) {
 		float n = 1 - abs(fbm(coords * 0.1, 4));

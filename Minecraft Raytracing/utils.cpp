@@ -93,6 +93,13 @@ void setUniformVec3(const unsigned int shader, const char* name, const float x, 
 void setUniformVec3(unsigned int shader, const int location, const float x, const float y, const float z) {
 	glUniform3f(location, x, y, z);
 }
+void setUniformVec3i(const unsigned int shader, const char* name, const int x, const int y, const int z) {
+	const unsigned int location = glGetUniformLocation(shader, name);
+	glUniform3i(location, x, y, z);
+}
+void setUniformVec3i(unsigned int shader, const int location, const int x, const int y, const int z) {
+	glUniform3i(location, x, y, z);
+}
 void setUniformVec3(const unsigned int shader, const char* name, const v3 vector) {
 	const unsigned int location = glGetUniformLocation(shader, name);
 	glUniform3f(location, vector.x, vector.y, vector.z);

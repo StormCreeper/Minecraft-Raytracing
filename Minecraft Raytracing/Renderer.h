@@ -17,7 +17,7 @@ struct WaterParameters {
 
 class Renderer {
 	int WIDTH, HEIGHT;
-	GLFWwindow* window_;
+	GLFWwindow* window;
 public:
 	float dt;
 	std::chrono::steady_clock::time_point last_time;
@@ -28,6 +28,9 @@ public:
 
 	//TEXTURES
 
+	VoxelTexture vt;
+	VoxelTexture miniVt;
+
 	// OBJECTS
 
 	unsigned int shader;
@@ -35,16 +38,15 @@ public:
 
 	Camera camera;
 
-	VoxelTexture vt;
-	VoxelTexture miniVt;
-
 	char* shader_error;
 
 	bool drawWindows = true;
 	bool rcp;
 	bool rfp;
 
-	int blockScale = 128;
+	int blockScale = 64;
+
+	int tool = 15;
 
 	WaterParameters wt = {
 		0.1, {0.5, 0.3}, 1, 0.8, 0.7, 1.3
@@ -67,6 +69,8 @@ public: // GETTERS AND SETTERS
 	int getWidth() const;
 	int getHeight() const;
 	void setWidthHeight(int width, int height);
+	void mouseInput(int button, int action, int mods);
+	void scrollInput(double xoffset, double yoffset);
 
 public:
 	bool start();
@@ -77,3 +81,5 @@ public:
 	bool processInput();
 	void reloadShaders();
 };
+
+float voxel_traversal(VoxelTexture& tex, v3 origin, v3 direction, v3& normal, unsigned char& blockType, int& mapX, int& mapY, int& mapZ);

@@ -13,6 +13,14 @@ void windowResizeCallback(GLFWwindow* window, const int width, const int height)
 	glViewport(0, 0, width, height);
 	renderer_ptr->setWidthHeight(width, height);
 }
+
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+	renderer_ptr->mouseInput(button, action, mods);
+}
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+	renderer_ptr->scrollInput(xoffset, yoffset);
+}
+
 void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* data)
 {
 	char* _source;
@@ -124,19 +132,19 @@ bool Renderer::start() {
 
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, 1);
 
-	window_ = glfwCreateWindow(WIDTH, HEIGHT, "Minecraft Raytracing", nullptr, nullptr);
-	if (!window_) {
+	window = glfwCreateWindow(WIDTH, HEIGHT, "Minecraft Raytracing", nullptr, nullptr);
+	if (!window) {
 		glfwTerminate();
 		return true;
 	}
 
-	glfwMakeContextCurrent(window_);
+	glfwMakeContextCurrent(window);
 	glewInit();
 
 	glfwSwapInterval(0);
 
 	//SETUP IMGUI
-	ImguiWindowsManager::ImguiInit(window_);
+	ImguiWindowsManager::ImguiInit(window);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -193,16 +201,20 @@ bool Renderer::start() {
 
 	// SETTING CALLBACKS
 
-	glfwSetCursorPosCallback(window_, mousePosCallback);
-	glfwSetWindowSizeCallback(window_, windowResizeCallback);
+	glfwSetCursorPosCallback(window, mousePosCallback);
+	glfwSetWindowSizeCallback(window, windowResizeCallback);
+	glfwSetMouseButtonCallback(window, MouseButtonCallback);
+	glfwSetScrollCallback(window, scroll_callback);
+
 
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(gl_debug_callback, nullptr);
 
 	glUseProgram(shader);
 
-	while (!glfwWindowShouldClose(window_)) {
-		if (!update())break;
+	while (!glfwWindowShouldClose(window)) {
+		if (!update())
+			break;
 	}
 
 	ImguiWindowsManager::ImguiCleanup();
@@ -221,12 +233,9 @@ bool Renderer::update() {
 
 	ImguiWindowsManager::ImguiCreateWindows(*this);
 
-	camera.updateInput(window_, dt, b_paused);
+	camera.updateInput(window, dt, b_paused);
 
 	if (processInput()) return false;
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
 	glUseProgram(shader);
 
 	updateUniforms();
@@ -241,7 +250,7 @@ bool Renderer::update() {
 
 	ImguiWindowsManager::ImguiRender();
 
-	glfwSwapBuffers(window_);
+	glfwSwapBuffers(window);
 
 	return true;
 }
@@ -284,6 +293,19 @@ void Renderer::updateUniforms() {
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
+
+	unsigned char block;
+	v3 normal;
+
+	int x, y, z;
+
+	float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
+
+	if (d >= 0)
+		setUniformVec3i(shader, "selected", x, y, z);
+	else
+		setUniformVec3i(shader, "selected", -1, -1, -1);
+
 }
 
 bool enter_unpressed = true;
@@ -291,10 +313,10 @@ bool escape_unpressed = true;
 bool m_unpressed = true;
 
 bool Renderer::processInput() {
-	if (glfwGetKey(window_, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		if (escape_unpressed) {
 			if (b_paused) {
-				glfwSetCursorPos(window_, 200, 200);
+				glfwSetCursorPos(window, 200, 200);
 			}
 			b_paused = !b_paused;
 
@@ -303,7 +325,7 @@ bool Renderer::processInput() {
 	} else {
 		escape_unpressed = true;
 	}
-	if (glfwGetKey(window_, GLFW_KEY_ENTER) == GLFW_PRESS) {
+	if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
 		if (enter_unpressed) {
 			reloadShaders();
 			enter_unpressed = false;
@@ -311,7 +333,7 @@ bool Renderer::processInput() {
 	} else {
 		enter_unpressed = true;
 	}
-	if (glfwGetKey(window_, GLFW_KEY_P) == GLFW_PRESS) {
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		if (m_unpressed) {
 			drawWindows = !drawWindows;
 			m_unpressed = false;
@@ -360,4 +382,172 @@ void Renderer::setWidthHeight(const int width, const int height) {
 		WIDTH = width;
 		HEIGHT = height;
 	}
+}
+
+uint8_t queryVoxel(VoxelTexture& tex, int x, int y, int z) {
+	if (x < 0 || y < 0 || z < 0) return 0;
+	if (x >= tex.dim[0] || y >= tex.dim[1] || z >= tex.dim[2]) return 0;
+
+	return tex.runTimeData[index(x, y, z, tex.dim[0], tex.dim[1], tex.dim[2])];
+}
+
+void setVoxel(VoxelTexture& tex, int x, int y, int z, uint8_t vox) {
+	if (x < 0 || y < 0 || z < 0) return;
+	if (x >= tex.dim[0] || y >= tex.dim[1] || z >= tex.dim[2]) return;
+
+	GLuint data[1] = { vox };
+	glBindTexture(GL_TEXTURE_3D, tex.texture_id);
+
+	glTexSubImage3D(GL_TEXTURE_3D, 0, x, y, z, 1, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+	tex.runTimeData[index(x, y, z, tex.dim[0], tex.dim[1], tex.dim[2])] = vox;
+}
+
+float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, uint8_t &block, int &mapX, int &mapY, int &mapZ) {
+
+	mapX = int(floor(origin.x));
+	mapY = int(floor(origin.y));
+	mapZ = int(floor(origin.z));
+
+	block = queryVoxel(tex, mapX, mapY, mapZ);
+	if (block != 0) {
+		normal = v3(0, 0, 0);
+		return 0;
+	}
+
+	float sideDistX;
+	float sideDistY;
+	float sideDistZ;
+
+	float deltaDX = abs(1 / direction.x);
+	float deltaDY = abs(1 / direction.y);
+	float deltaDZ = abs(1 / direction.z);
+	float perpWallDist = -1;
+
+	int stepX;
+	int stepY;
+	int stepZ;
+
+	int hit = 0;
+	int side;
+
+	if (direction.x < 0) {
+		stepX = -1;
+		sideDistX = (origin.x - mapX) * deltaDX;
+	}
+	else {
+		stepX = 1;
+		sideDistX = (mapX + 1.0 - origin.x) * deltaDX;
+	}
+	if (direction.y < 0) {
+		stepY = -1;
+		sideDistY = (origin.y - mapY) * deltaDY;
+	}
+	else {
+		stepY = 1;
+		sideDistY = (mapY + 1.0 - origin.y) * deltaDY;
+	}
+	if (direction.z < 0) {
+		stepZ = -1;
+		sideDistZ = (origin.z - mapZ) * deltaDZ;
+	}
+	else {
+		stepZ = 1;
+		sideDistZ = (mapZ + 1.0 - origin.z) * deltaDZ;
+	}
+
+	int step = 1;
+
+	for (int i = 0; i < 15; i++) {
+		if ((mapX >= tex.dim[0] && stepX > 0) || (mapY >= tex.dim[1] && stepY > 0) || (mapZ >= tex.dim[2] && stepZ > 0)) break;
+		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
+
+		if (sideDistX < sideDistY && sideDistX < sideDistZ) {
+			sideDistX += deltaDX;
+			mapX += stepX * step;
+			side = 0;
+		}
+		else if (sideDistY < sideDistX && sideDistY < sideDistZ) {
+			sideDistY += deltaDY;
+			mapY += stepY * step;
+			side = 1;
+		}
+		else {
+			sideDistZ += deltaDZ;
+			mapZ += stepZ * step;
+			side = 2;
+		}
+
+		block = queryVoxel(tex, mapX, mapY ,mapZ);
+		if (block != 0 && block != 14) {
+			if (side == 0) {
+				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x;
+				normal = v3(1, 0, 0) * -stepX;
+			}
+			else if (side == 1) {
+				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y;
+				normal = v3(0, 1, 0) * -stepY;
+			}
+			else {
+				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z;
+				normal = v3(0, 0, 1) * -stepZ;
+			}
+
+			break;
+		}
+	}
+
+	return perpWallDist;
+}
+
+void Renderer::mouseInput(int button, int action, int mods) {
+	if (b_paused) return;
+
+	if (button == 0 && action == GLFW_PRESS) {
+		uint8_t block;
+		v3 normal;
+
+		int x, y, z;
+
+		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
+
+		if (d >= 0) {
+			setVoxel(vt, x, y, z, 0);
+		}
+	}
+
+	if (button == 1 && action == GLFW_PRESS) {
+		uint8_t block;
+		v3 normal;
+
+		int x, y, z;
+
+		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
+
+		if (d >= 0) {
+			v3 pos = camera.position + camera.front * d + normal;
+
+			x += normal.x;
+			y += normal.y;
+			z += normal.z;
+
+			setVoxel(vt, x, y, z, tool);
+		}
+	}
+	
+	if (button == 2 && action == GLFW_PRESS) {
+		uint8_t block;
+		v3 normal;
+
+		int x, y, z;
+
+		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
+
+		if (d >= 0) {
+			tool = block;
+		}
+	}
+}
+
+void Renderer::scrollInput(double xoffset, double yoffset) {
+	tool = (tool - int(yoffset) + 15 - 1) % 15 + 1;
 }

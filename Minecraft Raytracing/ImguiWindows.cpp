@@ -47,6 +47,8 @@ void DebugWindowCubeDimensions(Renderer& R) {
     
     ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 2048);
     ImGui::SliderInt("Block Scale", &R.blockScale, 16, 256);
+    ImGui::SliderInt("Tool", &R.tool, 1, 15);
+
 
     ImGui::Text("Water");
 

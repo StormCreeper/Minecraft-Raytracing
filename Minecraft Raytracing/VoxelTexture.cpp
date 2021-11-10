@@ -55,6 +55,16 @@ void VoxelTexture::generateTextureComputed() {
 
 	glUseProgram(0);
 
+	uint8_t* data = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
+	
+	glBindTexture(GL_TEXTURE_3D, texture_id);
+	glGetTexImage(GL_TEXTURE_3D, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+
+	if (runTimeData) free(runTimeData);
+	runTimeData = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(uint8_t)));
+	if (runTimeData)
+		memcpy(runTimeData, data, dim[0] * dim[1] * dim[2] * sizeof(uint8_t));
+
 	free(data);
 }
 
@@ -65,7 +75,7 @@ int index(int x, int y, int z, int w, int h, int d) {
 void VoxelTexture::generateMiniTexture() {
 	srand(192901);
 
-	data = static_cast<unsigned char*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
+	uint8_t* data = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
 
 	for (int x = 0; x < dim[0]; x++) {
 		for (int y = 0; y < dim[1]; y++) {
@@ -82,6 +92,11 @@ void VoxelTexture::generateMiniTexture() {
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+
+	if (runTimeData) free(runTimeData);
+	runTimeData = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(uint8_t)));
+	if(runTimeData)
+		memcpy(runTimeData, data, dim[0] * dim[1] * dim[2] * sizeof(uint8_t));
 
 	free(data);
 }
@@ -115,7 +130,7 @@ void VoxelTexture::LoadFromVoxFile(const char* filename) {
 	dim[1] = scene->models[0]->size_y;
 	dim[2] = scene->models[0]->size_z;
 
-	data = (unsigned char*)malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int));
+	uint8_t* data = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
 
 	if (!data) {
 		std::cerr << "Unable to allocate enough memory\n";
@@ -146,10 +161,17 @@ void VoxelTexture::LoadFromVoxFile(const char* filename) {
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
 
 	glBindTexture(GL_TEXTURE_3D, 0);
+	
+	if (runTimeData) free(runTimeData);
+	runTimeData = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(uint8_t)));
+	if (runTimeData)
+		memcpy(runTimeData, data, dim[0] * dim[1] * dim[2] * sizeof(uint8_t));
+
 	free(data);
 }
 
 VoxelTexture::~VoxelTexture() {
+	free(runTimeData);
 	glDeleteTextures(1, &texture_id);
 	glDeleteProgram(shader_id);
 }

@@ -346,9 +346,7 @@
     #endif
 
     // 3d vector utilities
-    struct vec3 {
-        float x, y, z;
-    };
+
     static inline vec3 vec3_make(float x, float y, float z) { vec3 v; v.x = x; v.y = y; v.z = z; return v; }
     static inline vec3 vec3_negate(const vec3& v) { vec3 r; r.x = -v.x;  r.y = -v.y; r.z = -v.z; return r; }
 

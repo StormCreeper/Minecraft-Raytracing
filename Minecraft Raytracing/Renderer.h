@@ -82,4 +82,4 @@ public:
 	void reloadShaders();
 };
 
-float voxel_traversal(VoxelTexture& tex, v3 origin, v3 direction, v3& normal, unsigned char& blockType, int& mapX, int& mapY, int& mapZ);
+float voxel_traversal(VoxelTexture& tex, vec3 origin, vec3 direction, vec3& normal, unsigned char& blockType, int& mapX, int& mapY, int& mapZ);

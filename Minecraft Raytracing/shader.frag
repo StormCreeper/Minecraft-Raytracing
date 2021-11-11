@@ -3,15 +3,12 @@
 in vec2 fragPos;
 in float log2;
 
-uniform mat4 view;
+uniform vec2 u_Resolution;
 
-uniform vec3 viewPos;
+uniform float u_Time;
 
-uniform vec2 uResolution;
-
-uniform int renderDistance;
-
-uniform float uTime;
+uniform mat4 u_InverseProjection;
+uniform mat4 u_InverseView;
 
 float epsilon = 0.001;
 
@@ -24,15 +21,15 @@ struct WaterParameters {
 	float ior;
 };
 
-uniform WaterParameters wt;
+uniform WaterParameters u_WaterParams;
 
 struct VoxelMap {
 	usampler3D tex;
 	vec3 size;
 };
 
-uniform VoxelMap mainMap;
-uniform VoxelMap miniMap;
+uniform VoxelMap u_MainMap;
+uniform VoxelMap u_MiniMap;
 
 uniform float air_absorbance;
 uniform float water_absorbance;
@@ -41,7 +38,7 @@ out vec4 FragColor;
 
 #define PI 3.141592653589793238462643383279
 
-uniform float blockNum;
+uniform float u_MiniVoxResolution;
 
 uniform vec3[256] palette;
 
@@ -276,9 +273,6 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 			side = 2;
 		}
 
-		//if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
-		//if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
-
 		uint block = testVoxel(map, mapX, mapY, mapZ);
 		if(isSelected && test) {
 			int x = mapX % int(map.size.x - 1);
@@ -326,34 +320,29 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 
 		vec3 newPos = orig;
 		newPos -= vec3(int(orig.x), int(orig.y), int(orig.z));
-		newPos *= blockNum;
+		newPos *= u_MiniVoxResolution;
 
 		uint nBlockType = 0;
 		vec3 nNormal = vec3(0);
 		vec3 nThroughput = vec3(1);
 
-		float dist = miniTraversal(miniMap, newPos, direction, nNormal, nBlockType, nThroughput, false, selected == ivec3(mapX, mapY, mapZ), test);
+		float dist = miniTraversal(u_MiniMap, newPos, direction, nNormal, nBlockType, nThroughput, false, selected == ivec3(mapX, mapY, mapZ), test);
 		if(dist >= 0) {
-			scale = blockNum;
+			scale = u_MiniVoxResolution;
 			normal = nNormal;
 			throughput *= nThroughput;
 			blockType = nBlockType;
 
 			mini = true;
 
-			return dist / blockNum;
+			return dist / u_MiniVoxResolution;
 		}
 		else {
 			blockType = 0;
 			normal = vec3(0);
 		}
 	}
-	// if (medium != 14 && medium != 0) {
-	// 	normal = -direction;
-	// 	blockType = medium;
-	// 	scale = 1;
-	// 	return t1;
-	// }
+
 	if(medium != 14) medium = 0;
 
 	float sideDistX;
@@ -439,21 +428,21 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 
 				vec3 newPos = orig + direction * (perpWallDist- epsilon);
 				newPos -= vec3(mapX, mapY, mapZ);
-				newPos *= blockNum;
+				newPos *= u_MiniVoxResolution;
 
 				uint nBlockType = 0;
 				vec3 nNormal = vec3(0);
 
-				float dist = miniTraversal(miniMap, newPos, direction, nNormal, nBlockType, throughput, false, selected == ivec3(mapX, mapY, mapZ), test);
+				float dist = miniTraversal(u_MiniMap, newPos, direction, nNormal, nBlockType, throughput, false, selected == ivec3(mapX, mapY, mapZ), test);
 
 				if(dist >= 0) {
-					scale = blockNum;
+					scale = u_MiniVoxResolution;
 					normal = nNormal;
 					blockType = nBlockType;
 
 					mini = true;
 
-					return perpWallDist + dist / blockNum;
+					return perpWallDist + dist / u_MiniVoxResolution;
 				}
 				else {
 					blockType = 0;
@@ -520,7 +509,7 @@ void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, 
 }
 
 float waterHeightFunction(vec3 pos, float scale, int depth) {
-	vec3 time = uTime * vec3(wt.speed.x, 0, wt.speed.y);
+	vec3 time = u_Time * vec3(u_WaterParams.speed.x, 0, u_WaterParams.speed.y);
 	return fbmOff(pos * scale, time, depth) * 0.2 + 0.8;
 }
 
@@ -535,14 +524,9 @@ vec3 getFractColor(float n) {
 }
 
 vec2 getJuliaParam(int px, int py, int pz) {
-	/*uint rngb = uint(uint(px) * uint(201254) + uint(py) * uint(19277)+ uint(pz) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
+	uint rngb = uint(uint(px) * uint(201254) + uint(py) * uint(19277)+ uint(pz) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 	float cx = RandomFloat01(rngb);
-	float cy = RandomFloat01(rngb);*/
-
-	float cx = (px - 0) / (256. - 0.);
-	float cy = (pz - 0) / (256. - 0.);
-	cx = cx * 2 - 1.5;
-	cy = cy * 2 - 1;
+	float cy = RandomFloat01(rngb);
 
 	return vec2 (cx, cy);
 }
@@ -606,39 +590,17 @@ void getMaterial(uint type, vec3 pos, ivec3 ipos, inout Material mat, float scal
 
 		mat.specular = 0.1;
 	}
-	/*if(type == 11) {
-		vec3 col = vec3(1, 1, 0.5);
-		float d = 1/length(vec3(nco) - vec3(8, 8, 8)) * 8;
-		col *= pow(d, 0.4);
-		float noise = fbm(co * 0.1, 5) * 0.5 + 0.5;
-
-		mat.color = col*1.5;
-		mat.specular = 0;
-		mat.rmax = 0.8;
-		mat.rmin = 0;
-		mat.tint = vec3(1, 1, 0);
-		addDetails(1, mat, rngb, rngp, pos, 0.01);
-		return;
-	}*/
 	else if(type == 11) {
 		vec3 localpos = mod(pos, 1.0);
 
 		float xp = localpos.x;
 		float yp = localpos.z;
 
-		float y = (yp * 3 - 1.5);// * (int(pos.z) % 2 == 0 ? -1 : 1);
-		float x = (xp * 3 - 1.5);// * (int(pos.x) % 2 == 0 ? -1 : 1);
+		float y = (yp * 3 - 1.5);
+		float x = (xp * 3 - 1.5);
 
 		xp = pow(xp * 2. - 1., 3.) * 0.5 + 0.5;
 		yp = pow(yp * 2. - 1., 3.) * 0.5 + 0.5;
-
-		/*vec2 c1 = getJuliaParam(int(pos.x)  , int(pos.y), int(pos.z)  );
-		vec2 c2 = getJuliaParam(int(pos.x)+1, int(pos.y), int(pos.z)  );
-		vec2 c3 = getJuliaParam(int(pos.x)  , int(pos.y), int(pos.z)+1);
-		vec2 c4 = getJuliaParam(int(pos.x)+1, int(pos.y), int(pos.z)+1);
-		vec2 c12 = mix(c1, c2, xp);
-		vec2 c34 = mix(c3, c4, xp);
-		vec2 c   = mix(c12, c34, yp);*/
 
 		vec2 c = getJuliaParam(int(pos.x)  , int(pos.y), int(pos.z)  );
 
@@ -672,7 +634,7 @@ void getMaterial(uint type, vec3 pos, ivec3 ipos, inout Material mat, float scal
 	}
 	else if(type == 14) {
 		int depth = 5;
-		float s = wt.intensity;
+		float s = u_WaterParams.intensity;
 		float n11 = waterHeightFunction(pos * scale, s, depth);
 		if(mat.normal.y > 0.5) {
 			float n12 = waterHeightFunction(pos*scale + vec3(1, 0, 0), s, depth);
@@ -731,7 +693,7 @@ void getMaterial(uint type, vec3 pos, ivec3 ipos, inout Material mat, float scal
 		int y = nci.y;
 		int z = nci.z;
 
-		float noiseVal = fbm(vec3(x, y, z) * 0.01 + vec3(uTime), 4);
+		float noiseVal = fbm(vec3(x, y, z) * 0.01 + vec3(u_Time), 4);
 		if((x == 0 && y == 0) || (x == 0 && z == 0) || (y == 0 && z == 0)) mat.color = vec3(0);
 		//if(noiseVal > 0.5) mat.color = vec3(1);
 	}
@@ -752,7 +714,7 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 
 	int x, y, z;
 
-	float t = voxel_traversal(mainMap, origin, direction, obj.mat.normal, blockType, throughput, scale, true, mini, x, y, z, true);
+	float t = voxel_traversal(u_MainMap, origin, direction, obj.mat.normal, blockType, throughput, scale, true, mini, x, y, z, true);
 
 	if (t >= 0) {
 		obj.hitPoint = origin + direction * t;
@@ -771,7 +733,7 @@ float SendLightRay(vec3 origin, vec3 direction, inout vec3 throughput, inout flo
 	uint bt;
 	bool mini = false;
 	int x, y, z;
-	float t = voxel_traversal(mainMap, origin, direction, norm, bt, throughput, scale, true, mini, x, y, z, true);
+	float t = voxel_traversal(u_MainMap, origin, direction, norm, bt, throughput, scale, true, mini, x, y, z, true);
 
 	return t>0 ? 0.5 : 1;
 }
@@ -786,8 +748,8 @@ vec3 getSkyColor(vec3 dir) {
 	//return texture(skybox, dir).xyz;
 	vec3 color = vec3(0.2, 0.3, 0.8);
 	color += pow(max(dot(lightDir, dir), 0), 256) * vec3(1, 0.6, 0.8) * 6;
-	float density = fbm(dir*0.6 + vec3(uTime*0.05, 0, 0) + vec3(10), 1) * 0.5 + 0.5;
-	float cloud = fbm(dir + vec3(uTime*0.07, 0, 0), 10) * 0.5 + 0.5;
+	float density = fbm(dir*0.6 + vec3(u_Time*0.05, 0, 0) + vec3(10), 1) * 0.5 + 0.5;
+	float cloud = fbm(dir + vec3(u_Time*0.07, 0, 0), 10) * 0.5 + 0.5;
 	float heightMod = 1/(1+exp(-4*dir.y));
 	color += density * cloud * heightMod;
 	return color;
@@ -861,13 +823,13 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 
 			ncol *= throughput1;
 
-			float amount = wt.reflection;
+			float amount = u_WaterParams.reflection;
 
 			endColor = mix(obj.mat.color * illum, ncol * obj.mat.tint, amount);
 		}
 		if(obj.mat.transparent > 0) {
 			HitObj obj2;
-			vec3 newDir = normalize(refract(direction, obj.mat.normal, 1./wt.ior));
+			vec3 newDir = normalize(refract(direction, obj.mat.normal, 1./u_WaterParams.ior));
 			vec3 throughput2 = throughput;
 			SendOneRay(obj.hitPoint + newDir * epsilon, newDir, obj2, throughput2, lscale, isSelected);
 			vec3 ncol;
@@ -880,7 +842,7 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 			}
 			ncol = mix(ncol, water_fog, 1-throughput2.x);
 			ncol = mix(ncol, air_fog, 1-throughput2.y);
-			float amount = wt.refraction;
+			float amount = u_WaterParams.refraction;
 			endColor = mix(endColor * obj.mat.tint, ncol * obj.mat.tint, amount);
 		}
 	} else {
@@ -893,31 +855,22 @@ vec3 RayTrace(vec3 origin, vec3 direction) {
 }
 
 vec3 getPixelColor(vec2 fc) {
-	vec3 origin = viewPos;
-	vec2 uv;
-	uv = (fc - .5 * uResolution.xy) / uResolution.y;
-	vec3 dir = normalize(vec3(uv.x, uv.y, 0.4));
-    vec3 direction = normalize((vec4(dir, 0) * view).xyz);
 
-    //float l = -1.0 / dot(direction, vec3(0, 1, 0));
-    //vec3 Ur = normalize(l * vec3(0, 1, 0) + direction);
-    //if(l > 0) Ur *= -1;
-    //vec3 Ut = cross(direction, Ur);
+    vec2 ScreenSpace = (gl_FragCoord.xy) / u_Resolution.xy;
+	vec4 Clip = vec4(ScreenSpace.xy * 2.0f - 1.0f, -1.0, 1.0);
+	vec4 Eye = vec4(vec2(u_InverseProjection * Clip), -1.0, 0.0);
+	vec3 RayDirection = vec3(u_InverseView * Eye);
+	vec3 RayOrigin = u_InverseView[3].xyz;
+	RayDirection = normalize(RayDirection);
 
-    //origin -= 0.2 * (uv.x * Ut + uv.y * Ur);
-
-	return RayTrace(origin, direction).xyz;
+	return RayTrace(RayOrigin, RayDirection).xyz;
 }
 
 void main() {
 	FragColor.xyz += getPixelColor(gl_FragCoord.xy + 0*vec2( 1,  1) / 3);
-	if((abs(gl_FragCoord.x - uResolution.x / 2) <= 1 || abs(gl_FragCoord.y - uResolution.y / 2) <= 1) && length(gl_FragCoord.xy - uResolution.xy / 2) < 10)
-		FragColor.xyz = 1 - FragColor.xyz;
-	/*FragColor.xyz += getPixelColor(gl_FragCoord.xy + vec2(-1,  1) / 3);
-	FragColor.xyz += getPixelColor(gl_FragCoord.xy + vec2(-1, -1) / 3);
-	FragColor.xyz += getPixelColor(gl_FragCoord.xy + vec2( 1, -1) / 3);
 
-	FragColor.xyz /= 4;*/
+	if((abs(gl_FragCoord.x - u_Resolution.x / 2) <= 1 || abs(gl_FragCoord.y - u_Resolution.y / 2) <= 1) && length(gl_FragCoord.xy - u_Resolution.xy / 2) < 10)
+		FragColor.xyz = 1 - FragColor.xyz;
 
 	return;
 }

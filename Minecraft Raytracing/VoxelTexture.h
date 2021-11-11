@@ -1,6 +1,10 @@
 #pragma once
 
-#include "vf3dMat44.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+using namespace glm;
 
 int index(int x, int y, int z, int w, int h, int d);
 
@@ -8,10 +12,10 @@ class VoxelTexture {
 public:
 	int dim[3];
 
-	uint8_t*runTimeData;
+	uint8_t* runTimeData;
 	float voxel_width;
 
-	v3 palette[256];
+	vec3 palette[256];
 
 public:
 	VoxelTexture();

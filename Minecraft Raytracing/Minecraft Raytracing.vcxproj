@@ -149,7 +149,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)Dep\GLEW\include;$(SolutionDir)Dep\glfw\include;$(SolutionDir)Dep\Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Dep\GLEW\include;$(SolutionDir)Dep\glfw\include;$(SolutionDir)Dep\Imgui;C:\Users\telop\source\repos\StormCreeper\Minecraft-Raytracing\Dep\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>false</StringPooling>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -170,7 +170,6 @@
     <ClInclude Include="ogt_vox.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="utils.h" />
-    <ClInclude Include="vf3dMat44.h" />
     <ClInclude Include="VoxelTexture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -185,7 +184,6 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="utils.cpp" />
-    <ClCompile Include="vf3d.cpp" />
     <ClCompile Include="VoxelTexture.cpp" />
   </ItemGroup>
   <ItemGroup>

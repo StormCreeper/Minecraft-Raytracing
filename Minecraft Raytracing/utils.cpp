@@ -79,12 +79,12 @@ char* readSource(const char* filename) {
 	}
 	return text;
 }
-void setUniformM4(const unsigned int shader, const char* name, mat44 matrix) {
+void setUniformM4(const unsigned int shader, const char* name, mat4 matrix) {
 	const unsigned int location = glGetUniformLocation(shader, name);
-	glUniformMatrix4fv(location, 1, GL_FALSE, &(matrix.m[0][0]));
+	glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(matrix));
 }
-void setUniformM4(unsigned int shader, int loc, mat44 matrix) {
-	glUniformMatrix4fv(loc, 1, GL_FALSE, &(matrix.m[0][0]));
+void setUniformM4(unsigned int shader, int loc, mat4 matrix) {
+	glUniformMatrix4fv(loc, 1, GL_FALSE, value_ptr(matrix));
 }
 void setUniformVec3(const unsigned int shader, const char* name, const float x, const float y, const float z) {
 	const unsigned int location = glGetUniformLocation(shader, name);
@@ -100,7 +100,7 @@ void setUniformVec3i(const unsigned int shader, const char* name, const int x, c
 void setUniformVec3i(unsigned int shader, const int location, const int x, const int y, const int z) {
 	glUniform3i(location, x, y, z);
 }
-void setUniformVec3(const unsigned int shader, const char* name, const v3 vector) {
+void setUniformVec3(const unsigned int shader, const char* name, const vec3 vector) {
 	const unsigned int location = glGetUniformLocation(shader, name);
 	glUniform3f(location, vector.x, vector.y, vector.z);
 }

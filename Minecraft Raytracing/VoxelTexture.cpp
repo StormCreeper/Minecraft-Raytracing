@@ -149,7 +149,7 @@ void VoxelTexture::LoadFromVoxFile(const char* filename) {
 
 	for (int i = 0; i < 256; i++) {
 		ogt_vox_rgba color = scene->palette.color[i];
-		palette[i] = v3((float)color.r / 255.0f, (float)color.g / 255.0f, (float)color.b / 255.0f);
+		palette[i] = vec3((float)color.r / 255.0f, (float)color.g / 255.0f, (float)color.b / 255.0f);
 	}
 
 	ogt_vox_destroy_scene(scene);

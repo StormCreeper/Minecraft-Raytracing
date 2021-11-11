@@ -124,7 +124,7 @@ bool Renderer::start() {
 	renderer_ptr = this;
 
 	if (!glfwInit()) {
-		std::cout << "Program failed! " << endl;
+		std::cout << "Program failed! " << std::endl;
 	}
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -142,6 +142,8 @@ bool Renderer::start() {
 	glewInit();
 
 	glfwSwapInterval(0);
+
+	camera.resize(WIDTH, HEIGHT);
 
 	//SETUP IMGUI
 	ImguiWindowsManager::ImguiInit(window);
@@ -193,11 +195,6 @@ bool Renderer::start() {
 	//miniVt.generateTextureComputed();
 
 	std::cout << "Texture generation time : " << (end-start)*1000 << " ms\n";
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_3D, vt.texture_id);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
 
 	// SETTING CALLBACKS
 
@@ -256,33 +253,35 @@ bool Renderer::update() {
 }
 
 void Renderer::updateUniforms() {
-	camera.setUniforms(shader, true);
-	camera.updateModel(shader);
+	camera.setMatrices(shader);
 
-	setUniformVec2(shader, "uResolution", static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
+	setUniformM4(shader, "u_InverseView", glm::inverse(camera.view));
+	setUniformM4(shader, "u_InverseProjection", glm::inverse(camera.projection));
 
-	setUniformFloat(shader, "uTime", static_cast<float>(glfwGetTime()));
+	setUniformVec2(shader, "u_Resolution", static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
-	setUniformVec3(shader, "mainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
-	setUniformInt(shader, "mainMap.tex", 0);
+	setUniformFloat(shader, "u_Time", static_cast<float>(glfwGetTime()));
 
-	setUniformVec3(shader, "miniMap.size", blockScale, blockScale, blockScale);
-	setUniformInt(shader, "miniMap.tex", 1);
+	setUniformVec3(shader, "u_MainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
+	setUniformInt(shader, "u_MainMap.tex", 0);
 
-	setUniformFloat(shader, "blockNum", float(blockScale));
+	setUniformVec3(shader, "u_MiniMap.size", float(blockScale), float(blockScale), float(blockScale));
+	setUniformInt(shader, "u_MiniMap.tex", 1);
 
-	setUniformFloat(shader, "wt.intensity", wt.intensity);
-	setUniformVec2(shader, "wt.speed", wt.speed[0], wt.speed[1]);
-	setUniformFloat(shader, "wt.diffuse", wt.diffuse);
-	setUniformFloat(shader, "wt.reflection", wt.reflection);
-	setUniformFloat(shader, "wt.refraction", wt.refraction);
-	setUniformFloat(shader, "wt.ior", wt.ior);
+	setUniformFloat(shader, "u_MiniVoxResolution", float(blockScale));
+
+	setUniformFloat(shader, "u_WaterParams.intensity", wt.intensity);
+	setUniformVec2 (shader, "u_WaterParams.speed", wt.speed[0], wt.speed[1]);
+	setUniformFloat(shader, "u_WaterParams.diffuse", wt.diffuse);
+	setUniformFloat(shader, "u_WaterParams.reflection", wt.reflection);
+	setUniformFloat(shader, "u_WaterParams.refraction", wt.refraction);
+	setUniformFloat(shader, "u_WaterParams.ior", wt.ior);
 
 	setUniformFloat(shader, "air_absorbance", air_absorbance);
 	setUniformFloat(shader, "water_absorbance", water_absorbance);
 
 	for (int i = 0; i < 256; i++) {
-		string s = "palette[";
+		std::string s = "palette[";
 		s += std::to_string(i);
 		s += "]";
 		setUniformVec3(shader, s.c_str(), miniVt.palette[i]);
@@ -295,7 +294,7 @@ void Renderer::updateUniforms() {
 	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
 
 	unsigned char block;
-	v3 normal;
+	vec3 normal;
 
 	int x, y, z;
 
@@ -381,6 +380,8 @@ void Renderer::setWidthHeight(const int width, const int height) {
 	else {
 		WIDTH = width;
 		HEIGHT = height;
+
+		camera.resize(width, height);
 	}
 }
 
@@ -402,7 +403,7 @@ void setVoxel(VoxelTexture& tex, int x, int y, int z, uint8_t vox) {
 	tex.runTimeData[index(x, y, z, tex.dim[0], tex.dim[1], tex.dim[2])] = vox;
 }
 
-float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, uint8_t &block, int &mapX, int &mapY, int &mapZ) {
+float voxel_traversal(VoxelTexture &tex, vec3 origin, vec3 direction, vec3 &normal, uint8_t &block, int &mapX, int &mapY, int &mapZ) {
 
 	mapX = int(floor(origin.x));
 	mapY = int(floor(origin.y));
@@ -410,7 +411,7 @@ float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, ui
 
 	block = queryVoxel(tex, mapX, mapY, mapZ);
 	if (block != 0) {
-		normal = v3(0, 0, 0);
+		normal = vec3(0, 0, 0);
 		return 0;
 	}
 
@@ -436,7 +437,7 @@ float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, ui
 	}
 	else {
 		stepX = 1;
-		sideDistX = (mapX + 1.0 - origin.x) * deltaDX;
+		sideDistX = (float(mapX) + 1.0 - origin.x) * deltaDX;
 	}
 	if (direction.y < 0) {
 		stepY = -1;
@@ -444,7 +445,7 @@ float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, ui
 	}
 	else {
 		stepY = 1;
-		sideDistY = (mapY + 1.0 - origin.y) * deltaDY;
+		sideDistY = (float(mapY) + 1.0 - origin.y) * deltaDY;
 	}
 	if (direction.z < 0) {
 		stepZ = -1;
@@ -452,7 +453,7 @@ float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, ui
 	}
 	else {
 		stepZ = 1;
-		sideDistZ = (mapZ + 1.0 - origin.z) * deltaDZ;
+		sideDistZ = (float(mapZ) + 1.0 - origin.z) * deltaDZ;
 	}
 
 	int step = 1;
@@ -481,15 +482,15 @@ float voxel_traversal(VoxelTexture &tex, v3 origin, v3 direction, v3 &normal, ui
 		if (block != 0 && block != 14) {
 			if (side == 0) {
 				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x;
-				normal = v3(1, 0, 0) * -stepX;
+				normal = vec3(1, 0, 0) * -float(stepX);
 			}
 			else if (side == 1) {
 				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y;
-				normal = v3(0, 1, 0) * -stepY;
+				normal = vec3(0, 1, 0) * -float(stepY);
 			}
 			else {
 				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z;
-				normal = v3(0, 0, 1) * -stepZ;
+				normal = vec3(0, 0, 1) * -float(stepZ);
 			}
 
 			break;
@@ -504,7 +505,7 @@ void Renderer::mouseInput(int button, int action, int mods) {
 
 	if (button == 0 && action == GLFW_PRESS) {
 		uint8_t block;
-		v3 normal;
+		vec3 normal;
 
 		int x, y, z;
 
@@ -517,18 +518,18 @@ void Renderer::mouseInput(int button, int action, int mods) {
 
 	if (button == 1 && action == GLFW_PRESS) {
 		uint8_t block;
-		v3 normal;
+		vec3 normal;
 
 		int x, y, z;
 
 		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
 
 		if (d >= 0) {
-			v3 pos = camera.position + camera.front * d + normal;
+			vec3 pos = camera.position + camera.front * d + normal;
 
-			x += normal.x;
-			y += normal.y;
-			z += normal.z;
+			x += int(normal.x);
+			y += int(normal.y);
+			z += int(normal.z);
 
 			setVoxel(vt, x, y, z, tool);
 		}
@@ -536,7 +537,7 @@ void Renderer::mouseInput(int button, int action, int mods) {
 	
 	if (button == 2 && action == GLFW_PRESS) {
 		uint8_t block;
-		v3 normal;
+		vec3 normal;
 
 		int x, y, z;
 

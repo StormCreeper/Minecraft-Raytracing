@@ -7,7 +7,8 @@ Renderer* renderer_ptr;
 // CALLBACKS
 
 void mousePosCallback(GLFWwindow* window, const double position_x, const double position_y) {
-	renderer_ptr->getCameraPtr()->mouseCallback(window, static_cast<float>(position_x), static_cast<float>(position_y), renderer_ptr->b_paused);
+	if (!renderer_ptr->b_paused)
+		renderer_ptr->getPlayerPtr()->MouseMoveInput(window, static_cast<float>(position_x), static_cast<float>(position_y));
 }
 void windowResizeCallback(GLFWwindow* window, const int width, const int height) {
 	glViewport(0, 0, width, height);
@@ -143,7 +144,8 @@ bool Renderer::start() {
 
 	glfwSwapInterval(0);
 
-	camera.resize(WIDTH, HEIGHT);
+	player.camera.resize(WIDTH, HEIGHT);
+	player.vt = &vt;
 
 	//SETUP IMGUI
 	ImguiWindowsManager::ImguiInit(window);
@@ -219,6 +221,7 @@ bool Renderer::start() {
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &vbo);
 	glDeleteProgram(shader);
+
 	free(shader_error);
 
 	return false;
@@ -230,17 +233,22 @@ bool Renderer::update() {
 
 	ImguiWindowsManager::ImguiCreateWindows(*this);
 
-	camera.updateInput(window, dt, b_paused);
+	if (!b_paused)
+		player.KeyInput(window);
 
 	if (processInput()) return false;
-	glUseProgram(shader);
-
-	updateUniforms();
 
 	//UPDATE dt
 	const auto now = std::chrono::high_resolution_clock::now();
 	dt = std::chrono::duration<float>(now - last_time).count();
 	last_time = now;
+
+	if(!b_paused)
+		player.PhysicsUpdate(dt);
+
+	glUseProgram(shader);
+	
+	updateUniforms();
 
 	glClear(GL_COLOR_BUFFER_BIT);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -253,10 +261,10 @@ bool Renderer::update() {
 }
 
 void Renderer::updateUniforms() {
-	camera.setMatrices(shader);
+	player.camera.setMatrices(shader);
 
-	setUniformM4(shader, "u_InverseView", glm::inverse(camera.view));
-	setUniformM4(shader, "u_InverseProjection", glm::inverse(camera.projection));
+	setUniformM4(shader, "u_InverseView", glm::inverse(player.camera.view));
+	setUniformM4(shader, "u_InverseProjection", glm::inverse(player.camera.projection));
 
 	setUniformVec2(shader, "u_Resolution", static_cast<float>(WIDTH), static_cast<float>(HEIGHT));
 
@@ -292,18 +300,9 @@ void Renderer::updateUniforms() {
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_3D, miniVt.texture_id);
-
-	unsigned char block;
-	vec3 normal;
-
-	int x, y, z;
-
-	float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
-
-	if (d >= 0)
-		setUniformVec3i(shader, "selected", x, y, z);
-	else
-		setUniformVec3i(shader, "selected", -1, -1, -1);
+	
+	ivec3 selected = player.selectedBlock;
+	setUniformVec3i(shader, "selected", selected.x, selected.y, selected.z);
 
 }
 
@@ -361,8 +360,8 @@ void Renderer::reloadShaders() {
 
 // GETTERS AND SETTERS
 
-Camera* Renderer::getCameraPtr() {
-	return &camera;
+Player* Renderer::getPlayerPtr() {
+	return &player;
 }
 
 int Renderer::getWidth() const {
@@ -381,174 +380,16 @@ void Renderer::setWidthHeight(const int width, const int height) {
 		WIDTH = width;
 		HEIGHT = height;
 
-		camera.resize(width, height);
+		player.camera.resize(width, height);
 	}
-}
-
-uint8_t queryVoxel(VoxelTexture& tex, int x, int y, int z) {
-	if (x < 0 || y < 0 || z < 0) return 0;
-	if (x >= tex.dim[0] || y >= tex.dim[1] || z >= tex.dim[2]) return 0;
-
-	return tex.runTimeData[index(x, y, z, tex.dim[0], tex.dim[1], tex.dim[2])];
-}
-
-void setVoxel(VoxelTexture& tex, int x, int y, int z, uint8_t vox) {
-	if (x < 0 || y < 0 || z < 0) return;
-	if (x >= tex.dim[0] || y >= tex.dim[1] || z >= tex.dim[2]) return;
-
-	GLuint data[1] = { vox };
-	glBindTexture(GL_TEXTURE_3D, tex.texture_id);
-
-	glTexSubImage3D(GL_TEXTURE_3D, 0, x, y, z, 1, 1, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
-	tex.runTimeData[index(x, y, z, tex.dim[0], tex.dim[1], tex.dim[2])] = vox;
-}
-
-float voxel_traversal(VoxelTexture &tex, vec3 origin, vec3 direction, vec3 &normal, uint8_t &block, int &mapX, int &mapY, int &mapZ) {
-
-	mapX = int(floor(origin.x));
-	mapY = int(floor(origin.y));
-	mapZ = int(floor(origin.z));
-
-	block = queryVoxel(tex, mapX, mapY, mapZ);
-	if (block != 0) {
-		normal = vec3(0, 0, 0);
-		return 0;
-	}
-
-	float sideDistX;
-	float sideDistY;
-	float sideDistZ;
-
-	float deltaDX = abs(1 / direction.x);
-	float deltaDY = abs(1 / direction.y);
-	float deltaDZ = abs(1 / direction.z);
-	float perpWallDist = -1;
-
-	int stepX;
-	int stepY;
-	int stepZ;
-
-	int hit = 0;
-	int side;
-
-	if (direction.x < 0) {
-		stepX = -1;
-		sideDistX = (origin.x - mapX) * deltaDX;
-	}
-	else {
-		stepX = 1;
-		sideDistX = (float(mapX) + 1.0 - origin.x) * deltaDX;
-	}
-	if (direction.y < 0) {
-		stepY = -1;
-		sideDistY = (origin.y - mapY) * deltaDY;
-	}
-	else {
-		stepY = 1;
-		sideDistY = (float(mapY) + 1.0 - origin.y) * deltaDY;
-	}
-	if (direction.z < 0) {
-		stepZ = -1;
-		sideDistZ = (origin.z - mapZ) * deltaDZ;
-	}
-	else {
-		stepZ = 1;
-		sideDistZ = (float(mapZ) + 1.0 - origin.z) * deltaDZ;
-	}
-
-	int step = 1;
-
-	for (int i = 0; i < 15; i++) {
-		if ((mapX >= tex.dim[0] && stepX > 0) || (mapY >= tex.dim[1] && stepY > 0) || (mapZ >= tex.dim[2] && stepZ > 0)) break;
-		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
-
-		if (sideDistX < sideDistY && sideDistX < sideDistZ) {
-			sideDistX += deltaDX;
-			mapX += stepX * step;
-			side = 0;
-		}
-		else if (sideDistY < sideDistX && sideDistY < sideDistZ) {
-			sideDistY += deltaDY;
-			mapY += stepY * step;
-			side = 1;
-		}
-		else {
-			sideDistZ += deltaDZ;
-			mapZ += stepZ * step;
-			side = 2;
-		}
-
-		block = queryVoxel(tex, mapX, mapY ,mapZ);
-		if (block != 0 && block != 14) {
-			if (side == 0) {
-				perpWallDist = (mapX - origin.x + (1 - stepX * step) / 2) / direction.x;
-				normal = vec3(1, 0, 0) * -float(stepX);
-			}
-			else if (side == 1) {
-				perpWallDist = (mapY - origin.y + (1 - stepY * step) / 2) / direction.y;
-				normal = vec3(0, 1, 0) * -float(stepY);
-			}
-			else {
-				perpWallDist = (mapZ - origin.z + (1 - stepZ * step) / 2) / direction.z;
-				normal = vec3(0, 0, 1) * -float(stepZ);
-			}
-
-			break;
-		}
-	}
-
-	return perpWallDist;
 }
 
 void Renderer::mouseInput(int button, int action, int mods) {
 	if (b_paused) return;
-
-	if (button == 0 && action == GLFW_PRESS) {
-		uint8_t block;
-		vec3 normal;
-
-		int x, y, z;
-
-		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
-
-		if (d >= 0) {
-			setVoxel(vt, x, y, z, 0);
-		}
-	}
-
-	if (button == 1 && action == GLFW_PRESS) {
-		uint8_t block;
-		vec3 normal;
-
-		int x, y, z;
-
-		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
-
-		if (d >= 0) {
-			vec3 pos = camera.position + camera.front * d + normal;
-
-			x += int(normal.x);
-			y += int(normal.y);
-			z += int(normal.z);
-
-			setVoxel(vt, x, y, z, tool);
-		}
-	}
+	player.MouseButtonInput(button, action, mods);
 	
-	if (button == 2 && action == GLFW_PRESS) {
-		uint8_t block;
-		vec3 normal;
-
-		int x, y, z;
-
-		float d = voxel_traversal(vt, camera.position, camera.front, normal, block, x, y, z);
-
-		if (d >= 0) {
-			tool = block;
-		}
-	}
 }
 
 void Renderer::scrollInput(double xoffset, double yoffset) {
-	tool = (tool - int(yoffset) + 15 - 1) % 15 + 1;
+	player.tool = (player.tool - int(yoffset) + 15 - 1) % 15 + 1;
 }

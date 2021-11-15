@@ -4,10 +4,7 @@
 
 typedef class Camera Camera;
 class Camera {
-private:
-	vec3 up;
-	vec3 right;
-	vec3 world_up;
+public:
 	float rotation_x;
 	float rotation_y;
 	float speed;
@@ -16,7 +13,7 @@ private:
 	bool first_mouse;
 
 	int width, height;
-public:
+
 	mat4 projection;
 	mat4 view;
 
@@ -26,8 +23,8 @@ public:
 	Camera(float aspect, vec3 pos);
 
 	void setMatrices(unsigned int shader);
-	void updateInput(GLFWwindow* window, float delta_time, bool b_paused);
-	void mouseCallback(GLFWwindow* window, float position_x, float position_y, bool b_paused);
+
+	void mouseCallback(GLFWwindow* window, float position_x, float position_y);
 	void resize(int width, int height);
 
 	vec3 getPos() const;
@@ -35,4 +32,7 @@ public:
 	vec3 position;
 	vec3 velocity;
 	vec3 front;
+	vec3 up;
+	vec3 right;
+	vec3 world_up;
 };

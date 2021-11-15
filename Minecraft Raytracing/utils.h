@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "VoxelTexture.h"
 
 using namespace glm;
 
@@ -24,7 +25,7 @@ void setUniformVec3(unsigned int shader, int location, float x, float y, float z
 void setUniformVec3i(unsigned int shader, const char* name, int x, int y, int z);
 void setUniformVec3i(unsigned int shader, int location, int x, int y, int z);
 
-void setUniformVec3(unsigned int shader, const char* name, vec3 vector);
+void setUniformVec3(unsigned int shader, const char* name, glm::vec3 vector);
 
 void setUniformVec2(unsigned int shader, const char* name, float x, float y);
 void setUniformVec2(unsigned int shader, int location, float x, float y);
@@ -34,3 +35,8 @@ void setUniformInt(unsigned int shader, int location, int value);
 
 void setUniformFloat(unsigned int shader, const char* name, float value);
 void setUniformFloat(unsigned int shader, int location, float value);
+
+
+uint8_t queryVoxel(VoxelTexture& tex, int x, int y, int z);
+void setVoxel(VoxelTexture& tex, int x, int y, int z, uint8_t vox);
+float voxel_traversal(VoxelTexture& tex, vec3 origin, vec3 direction, vec3& normal, uint8_t& block, int& mapX, int& mapY, int& mapZ);

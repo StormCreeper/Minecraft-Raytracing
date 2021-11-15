@@ -34,28 +34,7 @@ void Camera::setMatrices(const unsigned int shader) {
 	view = glm::lookAt(position, position + front, up);
 }
 
-
-void Camera::updateInput(GLFWwindow* window, const float delta_time, const bool b_paused) {
-	if (b_paused) return;
-	float acc = 1 * powf(2, speed_mod);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) acc *= 20.0f;
-
-	glm::vec3 tmp_front = glm::normalize(glm::vec3(front.x, 0, front.z));
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) velocity += tmp_front * acc * speed;
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) velocity -= tmp_front * acc * speed;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) velocity -= right * acc * speed;
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) velocity += right * acc * speed;
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) velocity += world_up * acc * speed;
-	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) velocity -= world_up * acc * speed;
-
-	position += velocity * delta_time;
-	velocity.x = 0;
-	velocity.y = 0;
-	velocity.z = 0;
-}
-void Camera::mouseCallback(GLFWwindow* window, const float position_x, const float position_y, const bool b_paused) {
-	if (b_paused) return;
-	
+void Camera::mouseCallback(GLFWwindow* window, const float position_x, const float position_y) {
 	if (first_mouse) {
 		last_x = position_x;
 		last_y = position_y;

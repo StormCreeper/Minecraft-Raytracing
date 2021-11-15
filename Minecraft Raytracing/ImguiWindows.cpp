@@ -47,7 +47,7 @@ void DebugWindowCubeDimensions(Renderer& R) {
     
     ImGui::SliderInt3("Scene dimension", R.vt.dim, 16, 2048);
     ImGui::SliderInt("Block Scale", &R.blockScale, 16, 256);
-    ImGui::SliderInt("Tool", &R.tool, 1, 15);
+    ImGui::SliderInt("Tool", &R.player.tool, 1, 15);
 
 
     ImGui::Text("Water");
@@ -71,7 +71,7 @@ void DebugWindowDebugInfo(Renderer& R) {
     ImGui::Begin("Debug Info");
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::Text("Position : (%.1f, %.1f, %.1f)", R.camera.position.x, R.camera.position.y, R.camera.position.z);
+    ImGui::Text("Position : (%.1f, %.1f, %.1f)", R.player.position.x, R.player.position.y, R.player.position.z);
 
     ImGui::End();
 
@@ -90,7 +90,7 @@ void DebugWindowDebugInfo(Renderer& R) {
     if (ImGui::Button("Regenerate voxel map")) {
         R.vt.generateTextureComputed();
     }
-    ImGui::SliderInt("Speed mod", &R.camera.speed_mod, -10, 10);
+    ImGui::SliderInt("Speed mod", &R.player.camera.speed_mod, -10, 10);
 
     ImGui::Text(R.shader_error);
     ImGui::End();

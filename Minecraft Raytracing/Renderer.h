@@ -4,6 +4,7 @@
 #include <chrono>
 #include "Camera.h"
 #include "VoxelTexture.h"
+#include "Player.h"
 #include <GLFW/glfw3.h>
 
 struct WaterParameters {
@@ -36,7 +37,7 @@ public:
 	unsigned int shader;
 	unsigned int vbo, vao;
 
-	Camera camera;
+	Player player;
 
 	char* shader_error;
 
@@ -45,8 +46,6 @@ public:
 	bool rfp;
 
 	int blockScale = 64;
-
-	int tool = 15;
 
 	WaterParameters wt = {
 		0.1, {0.5, 0.3}, 1, 0.8, 0.7, 1.3
@@ -65,7 +64,7 @@ public:
 	}
 
 public: // GETTERS AND SETTERS
-	Camera* getCameraPtr();
+	Player* getPlayerPtr();
 	int getWidth() const;
 	int getHeight() const;
 	void setWidthHeight(int width, int height);
@@ -81,5 +80,3 @@ public:
 	bool processInput();
 	void reloadShaders();
 };
-
-float voxel_traversal(VoxelTexture& tex, vec3 origin, vec3 direction, vec3& normal, unsigned char& blockType, int& mapX, int& mapY, int& mapZ);

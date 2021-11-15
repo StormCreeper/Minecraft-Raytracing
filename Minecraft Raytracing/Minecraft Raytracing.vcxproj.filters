@@ -36,6 +36,12 @@
     <ClInclude Include="ogt_vox.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="PhysicsSolver.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp">
@@ -73,6 +79,12 @@
     </ClCompile>
     <ClCompile Include="..\Dep\Imgui\imgui.cpp">
       <Filter>Fichiers sources\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsSolver.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

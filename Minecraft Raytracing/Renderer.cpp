@@ -176,7 +176,7 @@ bool Renderer::start() {
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void*>(nullptr));
 	glEnableVertexAttribArray(0);
 
-	shader = createProgram("shader.vert", "shader.frag");
+	shader = createProgram("Data/Shader/shader.vert", "Data/Shader/shader.frag");
 	glUseProgram(0);
 
 	shader_error = static_cast<char*>(malloc(2048 * sizeof(char)));
@@ -192,7 +192,7 @@ bool Renderer::start() {
 	vt.generateTextureComputed();
 	double end = glfwGetTime();
 
-	miniVt.LoadFromVoxFile("Vox/teapot.vox");
+	miniVt.LoadFromVoxFile("Data/Vox/teapot.vox");
 	//miniVt.generateMiniTexture();
 	//miniVt.generateTextureComputed();
 
@@ -352,7 +352,7 @@ bool Renderer::processInput() {
 void Renderer::reloadShaders() {
 	memset(shader_error, 0, 2048 * sizeof(char));
 
-	const unsigned int new_shader = createProgram("vert.glsl", "frag.glsl", &shader_error);
+	const unsigned int new_shader = createProgram("Data/Shader/shader.vert", "Data/Shader/shader.frag");
 
 	if (new_shader != 128) {
 		glDeleteProgram(shader);

@@ -91,10 +91,10 @@ void DebugWindowDebugInfo(Renderer& R) {
     ImGui::InputText("", buf1, 64);
     ImGui::SameLine();
     if (ImGui::Button("Save to the file")) {
-        SaveManager::save("test.txt", *&R.player);
+        SaveManager::save("Data/test.txt", *&R.player);
     }
     if (ImGui::Button("Load from file")) {
-        SaveManager::load("test.txt", R.player, &R.vt);
+        SaveManager::load("Data/test.txt", R.player, &R.vt);
     }
     ImGui::End();
 
@@ -121,7 +121,7 @@ void DebugWindowDebugInfo(Renderer& R) {
     ImGui::Begin("Settings");
     
     if (ImGui::Button("Load default settings"))
-        SettingsManager::load("default.stg");
+        SettingsManager::load("Data/default.stg");
 
     SettingsManager::ImGuiWindow();
     

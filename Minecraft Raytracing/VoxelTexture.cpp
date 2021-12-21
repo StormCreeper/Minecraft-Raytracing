@@ -22,7 +22,7 @@ void VoxelTexture::generateTextureComputed() {
 
 	if (shader_id) glDeleteProgram(shader_id);
 
-	char* shaderSource = readSource("compute.glsl");
+	char* shaderSource = readSource("Data/Shader/compute.glsl");
 	unsigned int compute_shader = createShader(GL_COMPUTE_SHADER, shaderSource);
 
 	free(shaderSource);

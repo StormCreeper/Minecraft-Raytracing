@@ -44,6 +44,9 @@ uniform vec3[256] palette;
 
 uniform ivec3 selected;
 
+uniform vec3 colorGreen;
+uniform vec3 colorBrown;
+
 float tseed = 0;
 uint rngState = uint(uint(gl_FragCoord.x) * uint(1973) + uint(gl_FragCoord.y) * uint(9277) + uint(tseed * 100) * uint(26699)) | uint(1);
 
@@ -656,9 +659,14 @@ void getMaterial(uint type, vec3 pos, ivec3 ipos, inout Material mat, float scal
 		vec3 ore;
 		switch(type) {
 			case 1:
-				mat.color = vec3(0.3, 1, 0.1); break;
+				float rand = pow(RandomFloat01(rngp), 8) + nco.y / 16.0f;
+				if(rand > 0.7)
+					mat.color = colorGreen;// vec3(0.3, 1, 0.1);
+				else
+					mat.color = colorBrown;// vec3(0.8, 0.7, 0.2);	
+				break;
 			case 2:
-				mat.color = vec3(0.8, 0.7, 0.2); break;
+				mat.color = colorBrown;// vec3(0.8, 0.7, 0.2); break;
 			case 3:
 				mat.color = vec3(0.8, 0.8, 0.8); break;
 			case 4:
@@ -722,7 +730,7 @@ void SendOneRay(vec3 origin, vec3 direction, inout HitObj obj, inout vec3 throug
 		if(mini) {
 			obj.mat.color = palette[blockType];
 		} else {
-			getMaterial(blockType, obj.hitPoint, ivec3(x, y, z), obj.mat, scale, isSelected);
+			getMaterial(blockType, obj.hitPoint - vec3(0, 0.01, 0), ivec3(x, y, z), obj.mat, scale, isSelected);
 		}
 		obj.hit = true;
 	}

@@ -17,12 +17,10 @@ public:
 	mat4 projection;
 	mat4 view;
 
-	int speed_mod;
-
 	Camera();
 	Camera(float aspect, vec3 pos);
 
-	void setMatrices(unsigned int shader);
+	void setMatrices(unsigned int shader, float fov);
 
 	void mouseCallback(GLFWwindow* window, float position_x, float position_y);
 	void resize(int width, int height);
@@ -30,7 +28,6 @@ public:
 	vec3 getPos() const;
 
 	vec3 position;
-	vec3 velocity;
 	vec3 front;
 	vec3 up;
 	vec3 right;

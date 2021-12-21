@@ -152,7 +152,7 @@ float voxel_traversal(VoxelTexture& tex, vec3 origin, vec3 direction, vec3& norm
 	mapZ = int(floor(origin.z));
 
 	block = queryVoxel(tex, mapX, mapY, mapZ);
-	if (block != 0) {
+	if (block != 0 && block != 14) {
 		normal = vec3(0, 0, 0);
 		return 0;
 	}

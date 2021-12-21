@@ -229,19 +229,22 @@ bool Renderer::start() {
 
 bool Renderer::update() {
 
-	glfwPollEvents();
-
-	ImguiWindowsManager::ImguiCreateWindows(*this);
-
-	if (!b_paused)
-		player.KeyInput(window);
-
-	if (processInput()) return false;
-
 	//UPDATE dt
+
 	const auto now = std::chrono::high_resolution_clock::now();
 	dt = std::chrono::duration<float>(now - last_time).count();
 	last_time = now;
+
+	ImguiWindowsManager::ImguiCreateWindows(*this);
+
+	// Manage events
+
+	glfwPollEvents();
+
+	if (!b_paused)
+		player.KeyInput(window, dt);
+
+	if (processInput()) return false;
 
 	if(!b_paused)
 		player.PhysicsUpdate(dt);
@@ -261,7 +264,7 @@ bool Renderer::update() {
 }
 
 void Renderer::updateUniforms() {
-	player.camera.setMatrices(shader);
+	player.camera.setMatrices(shader, player.fov);
 
 	setUniformM4(shader, "u_InverseView", glm::inverse(player.camera.view));
 	setUniformM4(shader, "u_InverseProjection", glm::inverse(player.camera.projection));
@@ -287,6 +290,9 @@ void Renderer::updateUniforms() {
 
 	setUniformFloat(shader, "air_absorbance", air_absorbance);
 	setUniformFloat(shader, "water_absorbance", water_absorbance);
+
+	setUniformVec3(shader, "colorGreen", color_green);
+	setUniformVec3(shader, "colorBrown", color_brown);
 
 	for (int i = 0; i < 256; i++) {
 		std::string s = "palette[";

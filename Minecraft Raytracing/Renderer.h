@@ -54,6 +54,9 @@ public:
 	float air_absorbance = 3.25;
 	float water_absorbance = 1.1;
 
+	glm::vec3 color_green = glm::vec3(0.3, 1, 0.1);
+	glm::vec3 color_brown = glm::vec3(0.8, 0.7, 0.2);
+
 public:
 	Renderer() = default;
 

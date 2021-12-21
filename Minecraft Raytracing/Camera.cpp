@@ -3,9 +3,8 @@
 constexpr float degtorad = 3.1415926535f / 180.0f;
 
 
-Camera::Camera() : speed(14.0f), speed_mod(0), last_x(0), last_y(0), projection(), view(), height(), width() {
+Camera::Camera() : speed(14.0f), last_x(0), last_y(0), projection(), view(), height(), width() {
 	position = vec3(-5, 3, -5);
-	velocity = vec3(0, 0, 0);
 	rotation_x = 0;
 	rotation_y = 0;
 
@@ -16,9 +15,8 @@ Camera::Camera() : speed(14.0f), speed_mod(0), last_x(0), last_y(0), projection(
 
 	first_mouse = true;
 }
-Camera::Camera(float aspect, const glm::vec3 pos) : speed(14.0f), speed_mod(0), last_x(0), last_y(0), projection(), view(), height(), width() {
+Camera::Camera(float aspect, const glm::vec3 pos) : speed(14.0f), last_x(0), last_y(0), projection(), view(), height(), width() {
 	position = pos;
-	velocity = glm::vec3(0, 0, 0);
 	rotation_x = 0;
 	rotation_y = 0;
 
@@ -30,7 +28,8 @@ Camera::Camera(float aspect, const glm::vec3 pos) : speed(14.0f), speed_mod(0), 
 	first_mouse = true;
 }
 
-void Camera::setMatrices(const unsigned int shader) {
+void Camera::setMatrices(const unsigned int shader, float fov) {
+	projection = glm::perspective(glm::radians<float>(fov), float(width) / float(height), 0.01f, 1200.0f);
 	view = glm::lookAt(position, position + front, up);
 }
 

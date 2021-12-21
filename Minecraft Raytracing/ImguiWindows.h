@@ -1,6 +1,5 @@
 #pragma once
 #include "Renderer.h"
-#include <imgui.h>
 
 void DebugWindowCubeDimensions(Renderer& R);
 void DebugWindowDebugInfo(Renderer& R);

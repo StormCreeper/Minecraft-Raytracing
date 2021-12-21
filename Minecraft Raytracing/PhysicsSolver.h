@@ -13,3 +13,4 @@ struct PhysicsObject {
 };
 
 bool collide(const AABB& a, const AABB& b);
+void intersection(const AABB& a, const AABB& b, AABB& c);

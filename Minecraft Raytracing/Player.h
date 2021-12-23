@@ -24,7 +24,6 @@ public:
 	bool spaceReleased = true;
 	float lastTimeSpaceBarPressed = 0;
 
-	int tool = 15;
 	ivec3 selectedBlock;
 
 	VoxelTexture* vt;

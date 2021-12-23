@@ -454,11 +454,9 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 					continue;
 				}
 			}
-
 			break;
 		}
 	}
-
 	return perpWallDist;
 }
 
@@ -666,7 +664,7 @@ void getMaterial(uint type, vec3 pos, ivec3 ipos, inout Material mat, float scal
 					mat.color = colorBrown;// vec3(0.8, 0.7, 0.2);	
 				break;
 			case 2:
-				mat.color = colorBrown;// vec3(0.8, 0.7, 0.2); break;
+				mat.color = colorBrown; break;// vec3(0.8, 0.7, 0.2);
 			case 3:
 				mat.color = vec3(0.8, 0.8, 0.8); break;
 			case 4:
@@ -879,6 +877,13 @@ void main() {
 
 	if((abs(gl_FragCoord.x - u_Resolution.x / 2) <= 1 || abs(gl_FragCoord.y - u_Resolution.y / 2) <= 1) && length(gl_FragCoord.xy - u_Resolution.xy / 2) < 10)
 		FragColor.xyz = 1 - FragColor.xyz;
+
+	vec2 uv = (gl_FragCoord.xy) / u_Resolution.xy;
+	uv *= 1.0 - uv.yx;
+	float vig = min(uv.x * uv.y * 15.0, 1.0);
+	vig = pow(vig, 0.15);
+
+	FragColor.xyz *= vig;
 
 	return;
 }

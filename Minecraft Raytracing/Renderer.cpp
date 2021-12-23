@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include <iostream>
 #include "ImguiWindows.h"
+#include "SettingsManager.h"
 
 Renderer* renderer_ptr;
 
@@ -154,6 +155,8 @@ bool Renderer::start() {
 
 	glfwSwapInterval(0);
 
+	SettingsManager::load("Data/default.stg");
+
 	// SCREEN QUAD CREATION
 
 	float vertices[] = {
@@ -246,6 +249,7 @@ bool Renderer::update() {
 
 	if (processInput()) return false;
 
+
 	if(!b_paused)
 		player.PhysicsUpdate(dt);
 
@@ -266,6 +270,8 @@ bool Renderer::update() {
 void Renderer::updateUniforms() {
 	player.camera.setMatrices(shader, player.fov);
 
+	vt.dim = SettingsManager::get<glm::ivec3>("mapSize");
+
 	setUniformM4(shader, "u_InverseView", glm::inverse(player.camera.view));
 	setUniformM4(shader, "u_InverseProjection", glm::inverse(player.camera.projection));
 
@@ -275,24 +281,27 @@ void Renderer::updateUniforms() {
 
 	setUniformVec3(shader, "u_MainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
 	setUniformInt(shader, "u_MainMap.tex", 0);
+	
+	int blockScale = SettingsManager::get<int>("blockScale");
 
 	setUniformVec3(shader, "u_MiniMap.size", float(blockScale), float(blockScale), float(blockScale));
 	setUniformInt(shader, "u_MiniMap.tex", 1);
 
 	setUniformFloat(shader, "u_MiniVoxResolution", float(blockScale));
 
-	setUniformFloat(shader, "u_WaterParams.intensity", wt.intensity);
-	setUniformVec2 (shader, "u_WaterParams.speed", wt.speed[0], wt.speed[1]);
-	setUniformFloat(shader, "u_WaterParams.diffuse", wt.diffuse);
-	setUniformFloat(shader, "u_WaterParams.reflection", wt.reflection);
-	setUniformFloat(shader, "u_WaterParams.refraction", wt.refraction);
-	setUniformFloat(shader, "u_WaterParams.ior", wt.ior);
+	setUniformFloat(shader, "u_WaterParams.intensity", SettingsManager::get<float>("intensity"));
+	glm::vec2 speed = SettingsManager::get<glm::vec2>("speed");
+	setUniformVec2 (shader, "u_WaterParams.speed", speed.x, speed.y);
+	setUniformFloat(shader, "u_WaterParams.diffuse", SettingsManager::get<float>("diffuse"));
+	setUniformFloat(shader, "u_WaterParams.reflection", SettingsManager::get<float>("reflection"));
+	setUniformFloat(shader, "u_WaterParams.refraction", SettingsManager::get<float>("refraction"));
+	setUniformFloat(shader, "u_WaterParams.ior", SettingsManager::get<float>("ior"));
 
-	setUniformFloat(shader, "air_absorbance", air_absorbance);
-	setUniformFloat(shader, "water_absorbance", water_absorbance);
+	setUniformFloat(shader, "air_absorbance", SettingsManager::get<float>("air_absorbance"));
+	setUniformFloat(shader, "water_absorbance", SettingsManager::get<float>("water_absorbance"));
 
-	setUniformVec3(shader, "colorGreen", color_green);
-	setUniformVec3(shader, "colorBrown", color_brown);
+	setUniformVec3(shader, "colorGreen", SettingsManager::get<glm::vec3>("green"));
+	setUniformVec3(shader, "colorBrown", SettingsManager::get<glm::vec3>("brown"));
 
 	for (int i = 0; i < 256; i++) {
 		std::string s = "palette[";
@@ -312,15 +321,15 @@ void Renderer::updateUniforms() {
 
 }
 
-bool enter_unpressed = true;
-bool escape_unpressed = true;
-bool m_unpressed = true;
-
 bool Renderer::processInput() {
+
+	static bool enter_unpressed = true;
+	static bool escape_unpressed = true;
+
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		if (escape_unpressed) {
 			if (b_paused) {
-				glfwSetCursorPos(window, 200, 200);
+				glfwSetCursorPos(window, WIDTH / 2, HEIGHT / 2);
 			}
 			b_paused = !b_paused;
 
@@ -336,14 +345,6 @@ bool Renderer::processInput() {
 		}
 	} else {
 		enter_unpressed = true;
-	}
-	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-		if (m_unpressed) {
-			drawWindows = !drawWindows;
-			m_unpressed = false;
-		}
-	} else {
-		m_unpressed = true;
 	}
 
 	return false;
@@ -397,5 +398,8 @@ void Renderer::mouseInput(int button, int action, int mods) {
 }
 
 void Renderer::scrollInput(double xoffset, double yoffset) {
-	player.tool = (player.tool - int(yoffset) + 15 - 1) % 15 + 1;
+	int tool = SettingsManager::get<int>("tool");
+	tool = (tool - int(yoffset) + 15 - 1) % 15 + 1;
+	SettingsManager::set<int>("tool", tool);
+
 }

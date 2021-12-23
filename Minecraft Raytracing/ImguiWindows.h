@@ -1,8 +1,7 @@
 #pragma once
 #include "Renderer.h"
 
-void DebugWindowCubeDimensions(Renderer& R);
-void DebugWindowDebugInfo(Renderer& R);
+void DrawWindows(Renderer& R);
 
 class ImguiWindowsManager {
 public:

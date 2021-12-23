@@ -19,6 +19,7 @@ void SettingsManager::load(std::string filename) {
 		while (!file.eof()) {
 			std::string first;
 			file >> first;
+			if (first == "") continue;
 			
 			if (first == "#") {
 				while (!file.eof() && first != ";") {
@@ -26,12 +27,24 @@ void SettingsManager::load(std::string filename) {
 				}
 				continue;
 			}
+			if (first == "label") {
+				std::string label = "";
+				while (!file.eof() && first != ";") {
+					file >> first;
+					if(first != ";")
+						label += first;
+				}
+				Setting setting{ label, Label, {} };
+				settings.push_back(setting);
+				continue;
+			}
+
 			std::string name;
 			file >> name;
 
 			Setting setting;
 			setting.name = name;
-			std::cout << first << std::endl;
+
 			if (first == "int") {
 				int i;
 				file >> i;
@@ -82,7 +95,49 @@ void SettingsManager::load(std::string filename) {
 }
 
 void SettingsManager::save(std::string filename) {
-
+	std::ofstream file;
+	file.open(filename);
+	if (file.is_open()) {
+		for (Setting& setting : settings) {
+			bool minmax = true;
+			switch (setting.type) {
+			case Int:
+				file << "int " << setting.name << " " << std::get<int>(setting.value);
+				break;
+			case Float:
+				file << "float " << setting.name << " " << std::get<float>(setting.value);
+				break;
+			case Ivec3: {
+				glm::ivec3 vec = std::get<glm::ivec3>(setting.value);
+				file << "ivec3 " << setting.name << " " << vec.x << " " << vec.y << " " << vec.z;
+			}	break;
+			case Vec2: {
+				glm::vec2 vec = std::get<glm::vec2>(setting.value);
+				file << "vec2 " << setting.name << " " << vec.x << " " << vec.y;
+			}	break;
+			case Vec3: {
+				glm::vec3 vec = std::get<glm::vec3>(setting.value);
+				file << "vec3 " << setting.name << " " << vec.x << " " << vec.y << " " << vec.z;
+			}	break;
+			case Color: {
+				glm::vec3 vec = std::get<glm::vec3>(setting.value);
+				file << "color " << setting.name << " " << vec.x << " " << vec.y << " " << vec.z;
+			}	break;
+			case Label:
+				file << "label " << setting.name << " ;\n";
+				minmax = false;
+				break;
+			default:
+				break;
+			}
+			if(minmax)
+				file << " " << setting.min << " " << setting.max << " ;" << std::endl;
+		}
+		file.close();
+	}
+	else {
+		std::cout << "Unable to open file " << filename << std::endl;
+	}
 }
 
 void SettingsManager::ImGuiWindow() {
@@ -111,17 +166,15 @@ void SettingsManager::ImGuiWindow() {
 			setting.value.emplace<glm::vec2>(glm::vec2(buff2[0], buff2[1]));
 			break; }
 		case Vec3:
-			{glm::vec3 vec = std::get<glm::vec3>(setting.value);
-			float buff3[3] = { vec.x, vec.y, vec.z };
-			ImGui::SliderFloat3(setting.name.c_str(), buff3, setting.min, setting.max);
-			setting.value.emplace<glm::vec3>(glm::vec3(buff3[0], buff3[1], buff3[2]));
-			break; }
 		case Color:
 			{glm::vec3 vec = std::get<glm::vec3>(setting.value);
 			float bufc[3] = { vec.x, vec.y, vec.z };
 			ImGui::SliderFloat3(setting.name.c_str(), bufc, setting.min, setting.max);
 			setting.value.emplace<glm::vec3>(glm::vec3(bufc[0], bufc[1], bufc[2]));
 			break; }
+		case Label:
+			ImGui::Text(setting.name.c_str());
+			break;
 		default:
 			break;
 		}

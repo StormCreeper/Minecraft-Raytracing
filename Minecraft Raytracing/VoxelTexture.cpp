@@ -9,13 +9,12 @@
 VoxelTexture::VoxelTexture() {
 	texture_id = 0;
 	shader_id = 0;
+	dim = glm::ivec3();
 }
 
 void VoxelTexture::init(int w, int h, int d) {
 
-	dim[0] = w;
-	dim[1] = h;
-	dim[2] = d;
+	dim = glm::ivec3(w, h, d);
 }
 
 void VoxelTexture::generateTextureComputed() {
@@ -45,25 +44,25 @@ void VoxelTexture::generateTextureComputed() {
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim.x, dim.y, dim.z, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, nullptr);
 
 	glBindImageTexture(0, texture_id, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8UI);
-	glDispatchCompute(dim[0]/16, dim[1]/16, dim[2]/4);
+	glDispatchCompute(dim.x/16, dim.y/16, dim.z/4);
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R8UI);
 	glBindTexture(GL_TEXTURE_3D, 0);
 
 	glUseProgram(0);
 
-	uint8_t* data = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
+	uint8_t* data = static_cast<uint8_t*>(malloc(dim.x * dim.y * dim.z * sizeof(unsigned int)));
 	
 	glBindTexture(GL_TEXTURE_3D, texture_id);
 	glGetTexImage(GL_TEXTURE_3D, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
 
 	if (runTimeData) free(runTimeData);
-	runTimeData = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(uint8_t)));
+	runTimeData = static_cast<uint8_t*>(malloc(dim.x * dim.y * dim.z * sizeof(uint8_t)));
 	if (runTimeData)
-		memcpy(runTimeData, data, dim[0] * dim[1] * dim[2] * sizeof(uint8_t));
+		memcpy(runTimeData, data, dim.x * dim.y * dim.z * sizeof(uint8_t));
 
 	free(data);
 }
@@ -126,21 +125,21 @@ void VoxelTexture::LoadFromVoxFile(const char* filename) {
 	const ogt_vox_scene* scene = ogt_vox_read_scene(buffer, buffer_size);
 	delete[] buffer;
 
-	dim[0] = scene->models[0]->size_x;
-	dim[1] = scene->models[0]->size_y;
-	dim[2] = scene->models[0]->size_z;
+	dim.x = scene->models[0]->size_x;
+	dim.y = scene->models[0]->size_y;
+	dim.z = scene->models[0]->size_z;
 
-	uint8_t* data = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(unsigned int)));
+	uint8_t* data = static_cast<uint8_t*>(malloc(dim.x * dim.y * dim.z * sizeof(unsigned int)));
 
 	if (!data) {
 		std::cerr << "Unable to allocate enough memory\n";
 		return;
 	}
-	for (int x = 0; x < dim[0]; x++) {
-		for (int z = 0; z < dim[2]; z++) {
-			for (int y = 0; y < dim[1]; y++) {
-				unsigned int color_index = scene->models[0]->voxel_data[index(x, z, y, dim[0], dim[2], dim[1])];
-				int i = index(x, y, z, dim[0], dim[1], dim[2]);
+	for (int x = 0; x < dim.x; x++) {
+		for (int z = 0; z < dim.z; z++) {
+			for (int y = 0; y < dim.y; y++) {
+				unsigned int color_index = scene->models[0]->voxel_data[index(x, z, y, dim.x, dim.z, dim.y)];
+				int i = index(x, y, z, dim.x, dim.y, dim.z);
 				
 				data[i] = color_index;
 			}
@@ -158,14 +157,14 @@ void VoxelTexture::LoadFromVoxFile(const char* filename) {
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim[0], dim[1], dim[2], 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_R8UI, dim.x, dim.y, dim.z, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, data);
 
 	glBindTexture(GL_TEXTURE_3D, 0);
 	
 	if (runTimeData) free(runTimeData);
-	runTimeData = static_cast<uint8_t*>(malloc(dim[0] * dim[1] * dim[2] * sizeof(uint8_t)));
+	runTimeData = static_cast<uint8_t*>(malloc(dim.x * dim.y * dim.z * sizeof(uint8_t)));
 	if (runTimeData)
-		memcpy(runTimeData, data, dim[0] * dim[1] * dim[2] * sizeof(uint8_t));
+		memcpy(runTimeData, data, dim.x * dim.y * dim.z * sizeof(uint8_t));
 
 	free(data);
 }

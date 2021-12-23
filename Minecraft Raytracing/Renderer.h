@@ -41,22 +41,6 @@ public:
 
 	char* shader_error;
 
-	bool drawWindows = true;
-	bool rcp;
-	bool rfp;
-
-	int blockScale = 64;
-
-	WaterParameters wt = {
-		0.1, {0.5, 0.3}, 1, 0.8, 0.7, 1.3
-	};
-
-	float air_absorbance = 3.25;
-	float water_absorbance = 1.1;
-
-	glm::vec3 color_green = glm::vec3(0.3, 1, 0.1);
-	glm::vec3 color_brown = glm::vec3(0.8, 0.7, 0.2);
-
 public:
 	Renderer() = default;
 

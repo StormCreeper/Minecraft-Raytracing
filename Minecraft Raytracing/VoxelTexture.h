@@ -10,7 +10,7 @@ int index(int x, int y, int z, int w, int h, int d);
 
 class VoxelTexture {
 public:
-	int dim[3];
+	glm::ivec3 dim;
 
 	uint8_t* runTimeData;
 	float voxel_width;

@@ -1,6 +1,7 @@
 #include "Player.h"
 #include <iostream>
 #include "SaveManager.h"
+#include "SettingsManager.h"
 
 Player::Player() : camera(1, glm::vec3(-0,0,0)), position(100, 100, 100), velocity(0, 0, 0), selectedBlock(0), vt(nullptr) {
 
@@ -195,11 +196,11 @@ void Player::MouseButtonInput(int button, int action, int mods) {
 		if (button == 1 && action == GLFW_PRESS) {
 			glm::ivec3 pos = glm::vec3(selectedBlock.x + int(normal.x), selectedBlock.y + int(normal.y), selectedBlock.z + int(normal.z));
 			
-			setVoxel(*vt, pos.x, pos.y, pos.z, tool);
+			setVoxel(*vt, pos.x, pos.y, pos.z, SettingsManager::get<int>("tool"));
 			SaveManager::addAction(pos, block);
 		}
 		if (button == 2 && action == GLFW_PRESS)
-			tool = block;
+			SettingsManager::set<int>("tool", block);
 	}
 
 	voxel_traversal(*vt, position, camera.front, normal, block, selectedBlock.x, selectedBlock.y, selectedBlock.z);

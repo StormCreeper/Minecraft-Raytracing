@@ -182,6 +182,7 @@
     <ClCompile Include="..\Dep\Imgui\imgui_draw.cpp" />
     <ClCompile Include="..\Dep\Imgui\imgui_impl_glfw.cpp" />
     <ClCompile Include="..\Dep\Imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\Dep\Imgui\imgui_stdlib.cpp" />
     <ClCompile Include="..\Dep\Imgui\imgui_tables.cpp" />
     <ClCompile Include="..\Dep\Imgui\imgui_widgets.cpp" />
     <ClCompile Include="Camera.cpp" />

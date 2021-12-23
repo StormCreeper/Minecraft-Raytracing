@@ -1,0 +1,16 @@
+label General ;
+ivec3 mapSize 256 256 256 16 1024;
+int blockScale 64 1 256;
+int tool 15 0 15;
+label Water ;
+float intensity 0.1 0 2;
+vec2 speed 0.5 0.3 -1 1;
+float diffuse 1 0 2;
+float reflection 0.8 0 1;
+float refraction 0.7 0 1;
+float ior 1.3 1 2;
+float air_absorbance 3.25 0 5;
+float water_absorbance 1.1 0 5;
+label Colors ;
+color green 0 1 0 0 1;
+color brown 0.6 0.6 0.2 0 1;

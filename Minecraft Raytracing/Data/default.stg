@@ -3,7 +3,7 @@ ivec3 mapSize 256 256 256 16 1024 ;
 int blockScale 64 1 256 ;
 int tool 15 0 15 ;
 label Water ;
-float intensity 0.1 0 2 ;
+float intensity 0.2 0 1 ;
 vec2 speed 0.5 0.3 -1 1 ;
 float diffuse 1 0 2 ;
 float reflection 0.8 0 1 ;

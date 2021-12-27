@@ -155,7 +155,7 @@ bool Renderer::start() {
 
 	glfwSwapInterval(0);
 
-	SettingsManager::load("Data/default.stg");
+	SettingsManager::load("Data/save.stg");
 
 	// SCREEN QUAD CREATION
 
@@ -195,7 +195,7 @@ bool Renderer::start() {
 	vt.generateTextureComputed();
 	double end = glfwGetTime();
 
-	miniVt.LoadFromVoxFile("Data/Vox/teapot.vox");
+	miniVt.LoadFromVoxFile("Data/Vox/blocks.vox");
 	//miniVt.generateMiniTexture();
 	//miniVt.generateTextureComputed();
 
@@ -279,14 +279,15 @@ void Renderer::updateUniforms() {
 
 	setUniformFloat(shader, "u_Time", static_cast<float>(glfwGetTime()));
 
-	setUniformVec3(shader, "u_MainMap.size", static_cast<float>(vt.dim[0]), static_cast<float>(vt.dim[1]), static_cast<float>(vt.dim[2]));
+	setUniformVec3i(shader, "u_MainMap.size", vt.dim[0], vt.dim[1], vt.dim[2]);
 	setUniformInt(shader, "u_MainMap.tex", 0);
 	
 	int blockScale = SettingsManager::get<int>("blockScale");
 
-	setUniformVec3(shader, "u_MiniMap.size", float(blockScale), float(blockScale), float(blockScale));
+	setUniformVec3i(shader, "u_MiniMap.size", 48, 48, 48);
 	setUniformInt(shader, "u_MiniMap.tex", 1);
-
+	setUniformVec3i(shader, "u_MiniMap.sub", 3, 3, 3);
+	
 	setUniformFloat(shader, "u_MiniVoxResolution", float(blockScale));
 
 	setUniformFloat(shader, "u_WaterParams.intensity", SettingsManager::get<float>("intensity"));

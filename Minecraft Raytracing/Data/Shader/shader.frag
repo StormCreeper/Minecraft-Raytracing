@@ -25,7 +25,8 @@ uniform WaterParameters u_WaterParams;
 
 struct VoxelMap {
 	usampler3D tex;
-	vec3 size;
+	ivec3 size;
+	ivec3 sub;
 };
 
 uniform VoxelMap u_MainMap;
@@ -184,7 +185,16 @@ float RayPlaneIntersection(vec3 origin, vec3 direction, vec3 planeOrigin, vec3 p
 
 uint testVoxel(VoxelMap map, int x, int y, int z) {
 	if (x < 0 || y < 0 || z < 0 || x >= map.size.x || y >= map.size.y || z >= map.size.z) return 0;
-	return texture(map.tex, vec3(x, y, z) / map.size).r;
+	return texture(map.tex, vec3(x + .5, y + .5, z + .5) / map.size).r;
+}
+
+uint testVoxelSubMap(VoxelMap map, int x, int y, int z, int index) {
+	int sx = map.size.x / map.sub.x, sy = map.size.y / map.sub.y, sz = map.size.z / map.sub.z;
+	if (x < 0 || y < 0 || z < 0 || x >= sx  || y >= sy || z >= sz) return 0;
+	int dx = index % map.sub.x;
+	int dz = (index / map.sub.x) % map.sub.z;
+	int dy = (index / map.sub.x) / map.sub.z;
+	return texture(map.tex, vec3(sx * dx + x + .5, sy * dy + y + .5, sz * dz + z + .5) / map.size).r;
 }
 
 float projectToCube(VoxelMap map,vec3 ro, vec3 rd) {
@@ -207,9 +217,8 @@ float projectToCube(VoxelMap map,vec3 ro, vec3 rd) {
 	return t;
 }
 
-float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool recur, bool isSelected, bool test) {
+float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, inout uint blockType, inout vec3 throughput, bool recur, bool isSelected, bool test, int index) {
 	vec3 origin = orig;
-	
 
 	int mapX = int(floor(origin.x));
 	int mapY = int(floor(origin.y));
@@ -259,7 +268,7 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 	int step = 1;
 
 	for (int i = 0; i < 6000; i++) {
-		if ((mapX >= map.size.x && stepX > 0) || (mapY >= map.size.y && stepY > 0) || (mapZ >= map.size.z && stepZ > 0)) break;
+		if ((mapX >= map.size.x / map.sub.x && stepX > 0) || (mapY >= map.size.y / map.sub.y && stepY > 0) || (mapZ >= map.size.z / map.sub.z && stepZ > 0)) break;
 		if ((mapX < 0 && stepX < 0) || (mapY < 0 && stepY < 0) || (mapZ < 0 && stepZ < 0)) break;
 
 		if (sideDistX < sideDistY && sideDistX < sideDistZ) {
@@ -276,13 +285,13 @@ float miniTraversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal, 
 			side = 2;
 		}
 
-		uint block = testVoxel(map, mapX, mapY, mapZ);
-		if(isSelected && test) {
+		uint block = testVoxelSubMap(map, mapX, mapY, mapZ, index);
+		/*if(isSelected && test) {
 			int x = mapX % int(map.size.x - 1);
 			int y = mapY % int(map.size.y - 1);
 			int z = mapZ % int(map.size.z - 1);
 			if((x == 0 && y == 0) || (x == 0 && z == 0) || (y == 0 && z == 0)) block = 1;
-		}
+		}*/
 		if (block != medium) {
 			if(block != 0) blockType = block;
 			else blockType = medium;
@@ -319,7 +328,7 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 	mapZ = int(floor(origin.z));
 
 	uint medium = testVoxel(map, mapX, mapY, mapZ);
-	if(medium == 15 && recur) {
+	if(medium >= 15 && recur) {
 
 		vec3 newPos = orig;
 		newPos -= vec3(int(orig.x), int(orig.y), int(orig.z));
@@ -329,7 +338,7 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 		vec3 nNormal = vec3(0);
 		vec3 nThroughput = vec3(1);
 
-		float dist = miniTraversal(u_MiniMap, newPos, direction, nNormal, nBlockType, nThroughput, false, selected == ivec3(mapX, mapY, mapZ), test);
+		float dist = miniTraversal(u_MiniMap, newPos, direction, nNormal, nBlockType, nThroughput, false, selected == ivec3(mapX, mapY, mapZ), test, int(medium) - 15);
 		if(dist >= 0) {
 			scale = u_MiniVoxResolution;
 			normal = nNormal;
@@ -407,7 +416,7 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 		}
 
 		if(medium == 14) throughput.x *= 1 - pow(10, -water_absorbance);
-		if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance);
+		if(medium == 0) throughput.y *= 1 - pow(10, -air_absorbance) * 1;
 
 		uint block = testVoxel(map, mapX, mapY, mapZ);
 		if (block != medium) {
@@ -427,7 +436,7 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 				normal = vec3(0, 0, 1) * -stepZ;
 			}
 
-			if(recur && block == 15) {
+			if(recur && block >= 15) {
 
 				vec3 newPos = orig + direction * (perpWallDist- epsilon);
 				newPos -= vec3(mapX, mapY, mapZ);
@@ -436,7 +445,7 @@ float voxel_traversal(VoxelMap map, vec3 orig, vec3 direction, inout vec3 normal
 				uint nBlockType = 0;
 				vec3 nNormal = vec3(0);
 
-				float dist = miniTraversal(u_MiniMap, newPos, direction, nNormal, nBlockType, throughput, false, selected == ivec3(mapX, mapY, mapZ), test);
+				float dist = miniTraversal(u_MiniMap, newPos, direction, nNormal, nBlockType, throughput, false, selected == ivec3(mapX, mapY, mapZ), test, int(block) - 15);
 
 				if(dist >= 0) {
 					scale = u_MiniVoxResolution;
@@ -511,7 +520,8 @@ void addDetails(int type, inout Material mat, inout uint rngb, inout uint rngp, 
 
 float waterHeightFunction(vec3 pos, float scale, int depth) {
 	vec3 time = u_Time * vec3(u_WaterParams.speed.x, 0, u_WaterParams.speed.y);
-	return fbmOff(pos * scale, time, depth) * 0.2 + 0.8;
+	float height = fbmOff(pos * scale, time, depth) + pow(fbmOff(vec3(pos.x, 1000, pos.z) * scale * 0.5 , -time*0.8, depth), 1) * 2;
+	return height * u_WaterParams.intensity + (1-u_WaterParams.intensity);
 }
 
 vec3 getFractColor(float n) {
@@ -635,7 +645,7 @@ void getMaterial(uint type, vec3 pos, ivec3 ipos, inout Material mat, float scal
 	}
 	else if(type == 14) {
 		int depth = 5;
-		float s = u_WaterParams.intensity;
+		float s = 0.1;
 		float n11 = waterHeightFunction(pos * scale, s, depth);
 		if(mat.normal.y > 0.5) {
 			float n12 = waterHeightFunction(pos*scale + vec3(1, 0, 0), s, depth);
@@ -761,30 +771,6 @@ vec3 getSkyColor(vec3 dir) {
 	return color;
 }
 
-void fresnel(vec3 I, vec3 N, float ior, inout float kr)  {
-    float cosi = clamp(-1, 1, dot(I, N)); 
-    float etai = 1, etat = ior; 
-    if (cosi > 0) {
-    	float tmp = etai;
-    	etai = etat;
-    	etat = tmp;
-   	} 
-    // Compute sini using Snell's law
-    float sint = etai / etat * sqrt(max(0.f, 1 - cosi * cosi)); 
-    // Total internal reflection
-    if (sint >= 1) { 
-        kr = 1; 
-    } 
-    else { 
-        float cost = sqrt(max(0.f, 1 - sint * sint)); 
-        cosi = abs(cosi); 
-        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost)); 
-        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
-        kr = (Rs * Rs + Rp * Rp) / 2; 
-    } 
-    // As a consequence of the conservation of energy, transmittance is given by:
-    // kt = 1 - kr;
-}
 vec3 RayTrace(vec3 origin, vec3 direction) {
 	direction = normalize(direction);
 	HitObj obj;

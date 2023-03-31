@@ -141,7 +141,7 @@ void SettingsManager::save(std::string filename) {
 }
 
 void SettingsManager::ImGuiWindow() {
-	for (Setting &setting: settings) {
+	for (Setting& setting : settings) {
 		switch (setting.type) {
 		case Int:
 			{int i = std::get<int>(setting.value);
